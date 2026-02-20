@@ -1,0 +1,19 @@
+{
+  "name": "openchannel-mvp",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n API,WORKER,WEB -c blue,magenta,green \"npm run dev -w @openchannel/api\" \"npm run dev -w @openchannel/worker\" \"npm run dev -w @openchannel/web\"",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "lint": "npm run lint --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.2"
+  }
+}

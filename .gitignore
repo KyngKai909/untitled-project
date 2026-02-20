@@ -1,0 +1,14 @@
+node_modules
+.DS_Store
+.env
+.env.*
+!.env.example
+dist
+coverage
+storage/uploads/*
+!storage/uploads/.gitkeep
+storage/hls/*
+!storage/hls/.gitkeep
+storage/db.json
+storage/db.lock
+*.log
