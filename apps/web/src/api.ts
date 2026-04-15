@@ -11,7 +11,14 @@ import type {
   StreamSchedule
 } from "./types";
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8787";
+const API_BASE = normalizeApiBase(import.meta.env.VITE_API_BASE);
+
+function normalizeApiBase(value: string | undefined): string {
+  if (!value) {
+    return "";
+  }
+  return value.trim().replace(/\/+$/, "");
+}
 
 class ApiError extends Error {
   status: number;
@@ -23,7 +30,8 @@ class ApiError extends Error {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const url = API_BASE ? `${API_BASE}${path}` : path;
+  const response = await fetch(url, {
     ...options,
     headers: {
       ...(options.headers ?? {}),
@@ -42,7 +50,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export function getApiBase(): string {
-  return API_BASE;
+  if (API_BASE) {
+    return API_BASE;
+  }
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+  return "";
 }
 
 export async function listChannels(ownerWallet?: string): Promise<ChannelSummary[]> {

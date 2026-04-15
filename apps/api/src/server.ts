@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs";
+import fsSync from "node:fs";
 import path from "node:path";
 import cors from "cors";
 import express, { type Request, type Response } from "express";
@@ -27,6 +28,7 @@ import {
   HLS_ROOT,
   LIVEPEER_DEFAULT_ENABLED,
   UPLOAD_ROOT,
+  WEB_DIST_DIR,
   WEB_ORIGIN
 } from "./config.js";
 import { getChannel, getChannelAssets, getOrCreatePlayoutState, readDb, transaction } from "./db.js";
@@ -44,39 +46,57 @@ import { nowIso, slugify } from "./utils.js";
 const app = express();
 const upload = multer({ dest: path.join(UPLOAD_ROOT, "tmp") });
 
-function allowedCorsOrigins(): Set<string> {
-  const allowed = new Set<string>();
-  const configured = WEB_ORIGIN.trim();
-  if (!configured) {
-    return allowed;
+function addCorsOriginWithAliases(input: string, allowed: Set<string>) {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return;
   }
-
-  allowed.add(configured);
-
   try {
-    const base = new URL(configured);
+    const base = new URL(trimmed);
+    allowed.add(base.origin);
     if (base.hostname === "localhost") {
-      const alias = new URL(configured);
+      const alias = new URL(trimmed);
       alias.hostname = "127.0.0.1";
       allowed.add(alias.origin);
     } else if (base.hostname === "127.0.0.1") {
-      const alias = new URL(configured);
+      const alias = new URL(trimmed);
       alias.hostname = "localhost";
       allowed.add(alias.origin);
     }
   } catch {
-    // Keep only configured origin when URL parsing fails.
+    allowed.add(trimmed);
   }
-
-  return allowed;
 }
 
-const corsOrigins = allowedCorsOrigins();
+function allowedCorsOrigins(): { allowAnyOrigin: boolean; allowedOrigins: Set<string> } {
+  const allowed = new Set<string>();
+  const configured = WEB_ORIGIN.trim();
+  if (!configured || configured === "*") {
+    return { allowAnyOrigin: true, allowedOrigins: allowed };
+  }
+
+  let allowAnyOrigin = false;
+  for (const origin of configured.split(",")) {
+    const trimmed = origin.trim();
+    if (!trimmed) {
+      continue;
+    }
+    if (trimmed === "*") {
+      allowAnyOrigin = true;
+      continue;
+    }
+    addCorsOriginWithAliases(trimmed, allowed);
+  }
+
+  return { allowAnyOrigin, allowedOrigins: allowed };
+}
+
+const corsConfig = allowedCorsOrigins();
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || corsOrigins.has(origin)) {
+      if (!origin || corsConfig.allowAnyOrigin || corsConfig.allowedOrigins.has(origin)) {
         callback(null, true);
         return;
       }
@@ -98,6 +118,9 @@ app.use(
   })
 );
 app.use("/uploads", express.static(UPLOAD_ROOT));
+app.get("/api/health", (_req, res) => {
+  res.json({ ok: true, timestamp: nowIso() });
+});
 
 function sendError(res: Response, status: number, error: string) {
   res.status(status).json({ error });
@@ -1951,6 +1974,7 @@ app.put("/api/channels/:channelId/playlist", async (req, res) => {
     const state = getOrCreatePlayoutState(db, channel.id);
     if (assetIds.length === 0) {
       state.queueIndex = 0;
+      state.currentProgramOffsetSec = 0;
     } else {
       const normalizedQueueIndex = ((state.queueIndex % assetIds.length) + assetIds.length) % assetIds.length;
       let nextQueueIndex = normalizedQueueIndex;
@@ -1965,6 +1989,7 @@ app.put("/api/channels/:channelId/playlist", async (req, res) => {
       }
 
       state.queueIndex = nextQueueIndex;
+      state.currentProgramOffsetSec = 0;
     }
     state.updatedAt = nowIso();
 
@@ -2272,9 +2297,16 @@ app.post("/api/channels/:channelId/control", async (req: Request, res: Response)
     if (action === "start") {
       state.isRunning = true;
       state.lastAdAt = nowIso();
+      state.currentProgramOffsetSec = 0;
     }
-    if (action === "stop") state.isRunning = false;
-    if (action === "previous") state.queueIndex -= 1;
+    if (action === "stop") {
+      state.isRunning = false;
+      state.currentProgramOffsetSec = 0;
+    }
+    if (action === "previous") {
+      state.queueIndex -= 1;
+      state.currentProgramOffsetSec = 0;
+    }
     if (action === "start" && livepeerProvisionError) {
       state.lastError = `Livepeer setup error: ${livepeerProvisionError}`;
     }
@@ -2290,8 +2322,35 @@ app.post("/api/channels/:channelId/control", async (req: Request, res: Response)
   res.status(202).json(payload);
 });
 
+const serveWebApp = String(process.env.SERVE_WEB_APP ?? "true") !== "false";
+const webIndexPath = path.join(WEB_DIST_DIR, "index.html");
+if (serveWebApp && fsSync.existsSync(webIndexPath)) {
+  app.use(express.static(WEB_DIST_DIR));
+  app.get(/.*/, (req, res, next) => {
+    if (req.method !== "GET") {
+      return next();
+    }
+
+    if (
+      req.path === "/api" ||
+      req.path.startsWith("/api/") ||
+      req.path.startsWith("/hls/") ||
+      req.path.startsWith("/uploads/")
+    ) {
+      return next();
+    }
+
+    res.sendFile(webIndexPath);
+  });
+} else if (serveWebApp) {
+  console.warn(`[api] Web dist not found at ${webIndexPath}; frontend static hosting disabled.`);
+}
+
 app.listen(API_PORT, () => {
-  console.log(`OpenChannel API listening on http://localhost:${API_PORT}`);
+  console.log(`OpenChannel API listening on port ${API_PORT}`);
   console.log(`Serving HLS output from ${HLS_ROOT}`);
+  if (serveWebApp) {
+    console.log(`Serving web build from ${WEB_DIST_DIR}`);
+  }
   void recoverExternalIngestJobs();
 });

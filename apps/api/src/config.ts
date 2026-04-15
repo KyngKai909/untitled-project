@@ -7,13 +7,14 @@ const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, "../../..");
 loadEnvFile(path.join(workspaceRoot, ".env"));
 
-export const API_PORT = Number(process.env.API_PORT ?? 8787);
-export const WEB_ORIGIN = process.env.WEB_ORIGIN ?? "http://localhost:5173";
+export const API_PORT = Number(process.env.PORT ?? process.env.API_PORT ?? 8787);
+export const WEB_ORIGIN = process.env.WEB_ORIGIN ?? "*";
 export const STORAGE_ROOT = resolveStorageRoot(process.env.STORAGE_ROOT);
 export const UPLOAD_ROOT = path.join(STORAGE_ROOT, "uploads");
 export const HLS_ROOT = path.join(STORAGE_ROOT, "hls");
 export const DB_PATH = path.join(STORAGE_ROOT, "db.json");
 export const DB_LOCK_PATH = path.join(STORAGE_ROOT, "db.lock");
+export const WEB_DIST_DIR = resolveWebDistDir(process.env.WEB_DIST_DIR);
 
 export const LIVEPEER_API_KEY = process.env.LIVEPEER_API_KEY ?? "";
 export const LIVEPEER_API_BASE = process.env.LIVEPEER_API_BASE ?? "https://livepeer.studio/api";
@@ -83,6 +84,15 @@ function loadEnvFile(envPath: string): void {
 function resolveStorageRoot(configured: string | undefined): string {
   if (!configured || !configured.trim()) {
     return path.join(workspaceRoot, "storage");
+  }
+
+  const value = configured.trim();
+  return path.isAbsolute(value) ? value : path.resolve(workspaceRoot, value);
+}
+
+function resolveWebDistDir(configured: string | undefined): string {
+  if (!configured || !configured.trim()) {
+    return path.join(workspaceRoot, "apps", "web", "dist");
   }
 
   const value = configured.trim();

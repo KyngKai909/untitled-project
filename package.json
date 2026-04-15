@@ -7,8 +7,15 @@
     "packages/*"
   ],
   "scripts": {
+    "predev": "npm run build -w @openchannel/shared",
     "dev": "concurrently -n API,WORKER,WEB -c blue,magenta,green \"npm run dev -w @openchannel/api\" \"npm run dev -w @openchannel/worker\" \"npm run dev -w @openchannel/web\"",
-    "build": "npm run build --workspaces",
+    "predev:runtime": "npm run build -w @openchannel/shared",
+    "dev:runtime": "concurrently -n API,WORKER,WEB -c blue,magenta,green \"npx tsx apps/api/src/server.ts\" \"npx tsx apps/worker/src/worker.ts\" \"npm run dev -w @openchannel/web\"",
+    "build": "npm run build -w @openchannel/shared && npm run build -w @openchannel/api && npm run build -w @openchannel/worker && npm run build -w @openchannel/web",
+    "start:api": "node apps/api/dist/server.js",
+    "start:worker": "node apps/worker/dist/worker.js",
+    "start:runtime": "node scripts/start-runtime.mjs",
+    "start:railway": "npm run start:runtime",
     "typecheck": "npm run typecheck --workspaces",
     "lint": "npm run lint --workspaces"
   },

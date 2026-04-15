@@ -301,7 +301,9 @@ export default function StationManagerPage() {
     if (currentAsset?.durationSec && detail.state.currentStartedAt) {
       const startedAtMs = Date.parse(detail.state.currentStartedAt);
       if (!Number.isNaN(startedAtMs)) {
-        const elapsedSec = Math.max(0, Math.floor((nowMs - startedAtMs) / 1000));
+        const elapsedChunkSec = Math.max(0, Math.floor((nowMs - startedAtMs) / 1000));
+        const baseOffsetSec = Math.max(0, Math.floor(detail.state.currentProgramOffsetSec ?? 0));
+        const elapsedSec = currentAsset.type === "program" ? baseOffsetSec + elapsedChunkSec : elapsedChunkSec;
         remainingSec = Math.max(0, currentAsset.durationSec - elapsedSec);
         progressPct = Math.min(100, Math.max(0, (elapsedSec / currentAsset.durationSec) * 100));
       }

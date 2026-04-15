@@ -70,6 +70,12 @@ npm install
 npm run dev
 ```
 
+Stable no-watch runtime (useful for local parity with Railway):
+
+```bash
+npm run dev:runtime
+```
+
 Web app:
 - [http://localhost:5173](http://localhost:5173)
 
@@ -95,3 +101,30 @@ Use `.env.example` as baseline. Important keys:
 7. Provision Livepeer (if API key is configured), then enable Livepeer output.
 8. Click **Go Live**.
 9. Open station preview and verify HLS playback.
+
+## Railway deployment (single frontend URL)
+
+This repo is configured for a single Railway service that exposes one frontend URL and runs:
+- API (serves `/api`, `/hls`, `/uploads`)
+- Worker (playout loop)
+- Built web app (served by API from `apps/web/dist`)
+
+### Deploy
+
+```bash
+railway login --browserless
+railway link
+railway up
+```
+
+### Required Railway variables
+
+- `WEB_ORIGIN=*` (or your Railway app URL)
+- `STORAGE_ROOT=/data/storage` (recommended)
+- `LIVEPEER_API_KEY` (optional but required for Livepeer provisioning)
+- `PINATA_JWT` (optional for IPFS pinning)
+
+### Railway runtime notes
+
+- Attach a persistent volume mounted at `/data` if you want uploads/database to persist across deploys.
+- Keep service replica count at `1` for the JSON+lockfile MVP data layer.

@@ -18,6 +18,8 @@ interface HlsSegmenterOptions {
   streamMode?: StreamMode;
   assetMediaKind?: AssetMediaKind;
   radioBackgroundPath?: string;
+  startOffsetSec?: number;
+  maxDurationSec?: number;
 }
 
 export async function resetChannelOutput(outputDir: string): Promise<void> {
@@ -71,6 +73,13 @@ function looksAnimatedBackground(filePath: string | undefined): boolean {
   return ext === ".gif" || ext === ".webm" || ext === ".mp4" || ext === ".mov";
 }
 
+function formatFfmpegSeconds(value: number | undefined): string | undefined {
+  if (!Number.isFinite(value) || (value ?? 0) <= 0) {
+    return undefined;
+  }
+  return (value as number).toFixed(3);
+}
+
 export async function startHlsSegmenter(
   inputPath: string,
   outputDir: string,
@@ -81,6 +90,8 @@ export async function startHlsSegmenter(
   const segmentPattern = path.join(outputDir, "seg_%09d.ts");
   const shouldRenderRadioCanvas = options.streamMode === "radio" && options.assetMediaKind === "audio";
   const backgroundPath = options.radioBackgroundPath;
+  const startOffsetSec = formatFfmpegSeconds(options.startOffsetSec);
+  const maxDurationSec = formatFfmpegSeconds(options.maxDurationSec);
 
   const args = shouldRenderRadioCanvas
     ? [
@@ -92,9 +103,11 @@ export async function startHlsSegmenter(
             ? ["-stream_loop", "-1", "-i", backgroundPath]
             : ["-loop", "1", "-i", backgroundPath]
           : ["-f", "lavfi", "-i", "color=c=#111722:s=1280x720:r=30"]),
+        ...(startOffsetSec ? ["-ss", startOffsetSec] : []),
         "-re",
         "-i",
         inputPath,
+        ...(maxDurationSec ? ["-t", maxDurationSec] : []),
         "-map",
         "0:v:0",
         "-map",
@@ -110,9 +123,11 @@ export async function startHlsSegmenter(
         "-hide_banner",
         "-loglevel",
         "warning",
+        ...(startOffsetSec ? ["-ss", startOffsetSec] : []),
         "-re",
         "-i",
         inputPath,
+        ...(maxDurationSec ? ["-t", maxDurationSec] : []),
         "-tune",
         "zerolatency",
         ...sharedHlsArgs(segmentPattern, playlistPath)

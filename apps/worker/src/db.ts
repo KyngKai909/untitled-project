@@ -17,6 +17,7 @@ const DEFAULT_DB: DatabaseSchema = {
 };
 
 let writeQueue: Promise<void> = Promise.resolve();
+const LOCK_STALE_MS = 30_000;
 
 function guessMediaKindFromPath(localPath: string | undefined): "video" | "audio" {
   if (!localPath) {
@@ -76,6 +77,15 @@ async function withLock<T>(fn: () => Promise<T>): Promise<T> {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
         throw error;
       }
+      try {
+        const lockStat = await fs.stat(DB_LOCK_PATH);
+        if (Date.now() - lockStat.mtimeMs > LOCK_STALE_MS) {
+          await fs.unlink(DB_LOCK_PATH).catch(() => undefined);
+          continue;
+        }
+      } catch {
+        // Lock file may have been released between retries.
+      }
       await sleep(25);
     }
   }
@@ -112,12 +122,21 @@ export async function readDb(): Promise<DatabaseSchema> {
     storageProvider: asset.storageProvider ?? (asset.ipfsCid ? "ipfs" : "local"),
     mediaKind: asset.mediaKind === "audio" ? "audio" : guessMediaKindFromPath(asset.localPath)
   }));
+  const normalizedPlayoutStates = (parsed.playoutStates ?? []).map((state) => {
+    const rawOffset = state.currentProgramOffsetSec;
+    return {
+      ...state,
+      currentProgramOffsetSec:
+        typeof rawOffset === "number" && Number.isFinite(rawOffset) ? Math.max(0, Math.floor(rawOffset)) : 0
+    };
+  });
 
   return {
     ...DEFAULT_DB,
     ...parsed,
     channels: normalizedChannels,
     assets: normalizedAssets,
+    playoutStates: normalizedPlayoutStates,
     assetFolders: parsed.assetFolders ?? [],
     commands: parsed.commands ?? [],
     streamSchedules: parsed.streamSchedules ?? [],
@@ -164,6 +183,7 @@ export function getOrCreatePlayoutState(db: DatabaseSchema, channelId: string): 
       isRunning: false,
       queueIndex: 0,
       programCountSinceAd: 0,
+      currentProgramOffsetSec: 0,
       updatedAt: new Date().toISOString()
     };
     db.playoutStates.push(state);

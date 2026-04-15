@@ -29,6 +29,9 @@ interface NextAsset {
   asset: Asset;
   mode: "program" | "ad";
   advanceQueueIndex: boolean;
+  programCompleted: boolean;
+  playbackOffsetSec?: number;
+  playbackDurationSec?: number;
 }
 
 function orderedPlaylistAssets(db: DatabaseSchema, channelId: string): Asset[] {
@@ -39,6 +42,27 @@ function orderedPlaylistAssets(db: DatabaseSchema, channelId: string): Asset[] {
     .sort((a, b) => a.position - b.position)
     .map((item) => byId.get(item.assetId))
     .filter((asset): asset is Asset => Boolean(asset));
+}
+
+function normalizedProgramOffset(state: PlayoutState): number {
+  if (!Number.isFinite(state.currentProgramOffsetSec)) {
+    return 0;
+  }
+  return Math.max(0, Math.floor(state.currentProgramOffsetSec ?? 0));
+}
+
+function shouldInsertAd(channel: Channel, state: PlayoutState, hasAds: boolean): boolean {
+  if (!hasAds || channel.adTriggerMode === "disabled") {
+    return false;
+  }
+
+  if (channel.adTriggerMode === "time_interval") {
+    const lastAdMs = state.lastAdAt ? Date.parse(state.lastAdAt) : Date.parse(state.updatedAt);
+    const intervalMs = Math.max(30, channel.adTimeIntervalSec || 0) * 1000;
+    return !Number.isNaN(lastAdMs) && Date.now() - lastAdMs >= intervalMs;
+  }
+
+  return channel.adInterval > 0 && state.programCountSinceAd >= channel.adInterval;
 }
 
 function chooseNextAsset(channel: Channel, state: PlayoutState, db: DatabaseSchema): NextAsset | undefined {
@@ -52,34 +76,42 @@ function chooseNextAsset(channel: Channel, state: PlayoutState, db: DatabaseSche
     }
 
     const adIndex = Math.abs(state.queueIndex) % adPool.length;
-    return { asset: adPool[adIndex], mode: "ad", advanceQueueIndex: true };
+    return { asset: adPool[adIndex], mode: "ad", advanceQueueIndex: true, programCompleted: false };
   }
 
-  const shouldInsertAd = (() => {
-    if (adPool.length === 0) {
-      return false;
-    }
-
-    if (channel.adTriggerMode === "disabled") {
-      return false;
-    }
-
-    if (channel.adTriggerMode === "time_interval") {
-      const lastAdMs = state.lastAdAt ? Date.parse(state.lastAdAt) : Date.parse(state.updatedAt);
-      const intervalMs = Math.max(30, channel.adTimeIntervalSec || 0) * 1000;
-      return !Number.isNaN(lastAdMs) && Date.now() - lastAdMs >= intervalMs;
-    }
-
-    return channel.adInterval > 0 && state.programCountSinceAd >= channel.adInterval;
-  })();
-
-  if (shouldInsertAd) {
+  if (shouldInsertAd(channel, state, adPool.length > 0)) {
     const adIndex = Math.abs(state.queueIndex) % adPool.length;
-    return { asset: adPool[adIndex], mode: "ad", advanceQueueIndex: false };
+    return { asset: adPool[adIndex], mode: "ad", advanceQueueIndex: false, programCompleted: false };
   }
 
   const index = Math.abs(state.queueIndex) % programQueue.length;
-  return { asset: programQueue[index], mode: "program", advanceQueueIndex: true };
+  const asset = programQueue[index];
+  const currentOffsetSec = normalizedProgramOffset(state);
+  const assetDurationSec = Number.isFinite(asset.durationSec) ? Math.max(0, Math.floor(asset.durationSec ?? 0)) : 0;
+  const boundedOffsetSec = Math.min(currentOffsetSec, Math.max(0, assetDurationSec - 1));
+
+  if (channel.adTriggerMode === "time_interval" && adPool.length > 0 && assetDurationSec > 0) {
+    const intervalSec = Math.max(30, Math.floor(channel.adTimeIntervalSec || 0));
+    const remainingSec = Math.max(0, assetDurationSec - boundedOffsetSec);
+    if (remainingSec > intervalSec) {
+      return {
+        asset,
+        mode: "program",
+        advanceQueueIndex: false,
+        programCompleted: false,
+        playbackOffsetSec: boundedOffsetSec,
+        playbackDurationSec: intervalSec
+      };
+    }
+  }
+
+  return {
+    asset,
+    mode: "program",
+    advanceQueueIndex: true,
+    programCompleted: true,
+    playbackOffsetSec: boundedOffsetSec > 0 ? boundedOffsetSec : undefined
+  };
 }
 
 function getLivepeerConfig(db: DatabaseSchema, channelId: string): LivepeerConfig | undefined {
@@ -126,6 +158,7 @@ class ChannelRuntime {
   private outputDir?: string;
   private stopRequested = false;
   private skipRequested = false;
+  private previousRequested = false;
 
   constructor(private readonly channelId: string) {}
 
@@ -139,6 +172,7 @@ class ChannelRuntime {
     }
 
     this.stopRequested = false;
+    this.previousRequested = false;
     this.loopPromise = this.run()
       .catch((error) => {
         console.error(`[worker] channel ${this.channelId} runtime failed`, error);
@@ -160,6 +194,17 @@ class ChannelRuntime {
     }
 
     this.skipRequested = true;
+    this.previousRequested = false;
+    this.currentSession.process.kill("SIGTERM");
+  }
+
+  previous() {
+    if (!this.currentSession) {
+      return;
+    }
+
+    this.skipRequested = true;
+    this.previousRequested = true;
     this.currentSession.process.kill("SIGTERM");
   }
 
@@ -266,6 +311,7 @@ class ChannelRuntime {
           liveState.currentAssetId = undefined;
           liveState.currentAssetTitle = undefined;
           liveState.currentStartedAt = undefined;
+          liveState.currentProgramOffsetSec = 0;
           liveState.lastError = "No program assets in playlist.";
           liveState.updatedAt = nowIso();
         });
@@ -279,6 +325,9 @@ class ChannelRuntime {
         liveState.currentAssetId = next.asset.id;
         liveState.currentAssetTitle = next.asset.title;
         liveState.currentStartedAt = nowIso();
+        if (next.mode === "program") {
+          liveState.currentProgramOffsetSec = Math.max(0, Math.floor(next.playbackOffsetSec ?? 0));
+        }
         liveState.lastError = undefined;
         liveState.updatedAt = nowIso();
       });
@@ -288,13 +337,17 @@ class ChannelRuntime {
       this.currentSession = await startHlsSegmenter(next.asset.localPath, outputDir, {
         streamMode: channel.streamMode,
         assetMediaKind: next.asset.mediaKind,
-        radioBackgroundPath
+        radioBackgroundPath,
+        startOffsetSec: next.playbackOffsetSec,
+        maxDurationSec: next.playbackDurationSec
       });
       const result = await this.currentSession.finished;
       this.currentSession = undefined;
 
       const skipped = this.skipRequested;
+      const movedToPrevious = this.previousRequested;
       this.skipRequested = false;
+      this.previousRequested = false;
 
       const postState = await transaction((editable) => {
         const liveState = getOrCreatePlayoutState(editable, this.channelId);
@@ -302,17 +355,44 @@ class ChannelRuntime {
 
         const expectedTermination = skipped || !stillRunning;
         const ffmpegFailed = result.code !== 0 && result.signal !== "SIGTERM";
+        const currentOffsetSec = Math.max(0, Math.floor(next.playbackOffsetSec ?? 0));
+        const segmentDurationSec = Math.max(0, Math.floor(next.playbackDurationSec ?? 0));
+        const resumeOffsetSec = currentOffsetSec + segmentDurationSec;
 
         if (stillRunning) {
-          if (next.mode === "program") {
-            liveState.queueIndex += 1;
-            liveState.programCountSinceAd += 1;
-          } else {
-            if (next.advanceQueueIndex) {
+          if (skipped) {
+            if (movedToPrevious) {
+              // API already decrements queueIndex for "previous".
+              liveState.currentProgramOffsetSec = 0;
+            } else if (next.mode === "program") {
+              // Skip current program (or chunk) and move to next item.
               liveState.queueIndex += 1;
+              liveState.currentProgramOffsetSec = 0;
+            } else {
+              // Skip current ad and resume regular program flow.
+              if (next.advanceQueueIndex) {
+                liveState.queueIndex += 1;
+              }
+              liveState.programCountSinceAd = 0;
+              liveState.lastAdAt = nowIso();
             }
-            liveState.programCountSinceAd = 0;
-            liveState.lastAdAt = nowIso();
+          } else {
+            if (next.mode === "program") {
+              if (next.programCompleted) {
+                liveState.queueIndex += 1;
+                liveState.programCountSinceAd += 1;
+                liveState.currentProgramOffsetSec = 0;
+              } else {
+                // Time-sliced program chunk finished; resume from this offset after ad breaks.
+                liveState.currentProgramOffsetSec = resumeOffsetSec;
+              }
+            } else {
+              if (next.advanceQueueIndex) {
+                liveState.queueIndex += 1;
+              }
+              liveState.programCountSinceAd = 0;
+              liveState.lastAdAt = nowIso();
+            }
           }
         }
 
@@ -353,6 +433,7 @@ class ChannelRuntime {
       liveState.currentAssetId = undefined;
       liveState.currentAssetTitle = undefined;
       liveState.currentStartedAt = undefined;
+      liveState.currentProgramOffsetSec = 0;
       liveState.updatedAt = nowIso();
     });
 
@@ -361,6 +442,7 @@ class ChannelRuntime {
 
     this.stopRequested = false;
     this.skipRequested = false;
+    this.previousRequested = false;
     this.outputDir = undefined;
     console.log(`[worker] channel ${this.channelId} playout loop stopped`);
   }
@@ -394,6 +476,7 @@ async function applyCommand(command: PlayoutCommand) {
       state.isRunning = true;
       state.lastError = undefined;
       state.lastAdAt = nowIso();
+      state.currentProgramOffsetSec = 0;
       state.updatedAt = nowIso();
       return { shouldStart: true };
     });
@@ -408,6 +491,7 @@ async function applyCommand(command: PlayoutCommand) {
     await transaction((db) => {
       const state = getOrCreatePlayoutState(db, command.channelId);
       state.isRunning = false;
+      state.currentProgramOffsetSec = 0;
       state.updatedAt = nowIso();
     });
 
@@ -415,8 +499,14 @@ async function applyCommand(command: PlayoutCommand) {
     return;
   }
 
-  if (command.action === "skip" || command.action === "previous") {
+  if (command.action === "skip") {
     runtimeFor(command.channelId).skip();
+    return;
+  }
+
+  if (command.action === "previous") {
+    runtimeFor(command.channelId).previous();
+    return;
   }
 }
 
@@ -504,6 +594,7 @@ async function poll() {
             state.currentAssetId = undefined;
             state.currentAssetTitle = undefined;
             state.currentStartedAt = undefined;
+            state.currentProgramOffsetSec = 0;
             state.lastAdAt = now;
             state.lastError = undefined;
             state.isRunning = true;

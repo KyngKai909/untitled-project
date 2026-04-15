@@ -72,6 +72,7 @@ export interface PlayoutState {
   currentAssetId?: string;
   currentAssetTitle?: string;
   currentStartedAt?: string;
+  currentProgramOffsetSec?: number;
   queueIndex: number;
   programCountSinceAd: number;
   lastAdAt?: string;
