@@ -42,6 +42,16 @@ function normalizeStreamMode(value: unknown): Channel["streamMode"] {
   return value === "radio" ? "radio" : "video";
 }
 
+function normalizeInsertionCategory(value: unknown, assetType: Asset["type"]): Asset["insertionCategory"] {
+  if (assetType === "program") {
+    return "program";
+  }
+  if (value === "sponsor" || value === "bumper" || value === "ad") {
+    return value;
+  }
+  return "ad";
+}
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -90,6 +100,10 @@ export async function readDb(): Promise<DatabaseSchema> {
 
   const normalizedChannels = (parsed.channels ?? []).map((channel) => ({
     ...channel,
+    ownerWallet:
+      typeof channel.ownerWallet === "string" && /^0x[a-fA-F0-9]{40}$/.test(channel.ownerWallet.trim())
+        ? channel.ownerWallet.trim().toLowerCase()
+        : undefined,
     adInterval: Number.isFinite(channel.adInterval) ? Math.max(0, Math.floor(channel.adInterval)) : 2,
     adTriggerMode: normalizeAdTriggerMode(channel.adTriggerMode),
     adTimeIntervalSec: Number.isFinite(channel.adTimeIntervalSec)
@@ -108,6 +122,7 @@ export async function readDb(): Promise<DatabaseSchema> {
     ...asset,
     folderId: typeof asset.folderId === "string" && asset.folderId.trim() ? asset.folderId : undefined,
     storageProvider: asset.storageProvider ?? (asset.ipfsCid ? "ipfs" : "local"),
+    insertionCategory: normalizeInsertionCategory(asset.insertionCategory, asset.type === "ad" ? "ad" : "program"),
     mediaKind: asset.mediaKind === "audio" ? "audio" : guessMediaKindFromPath(asset.localPath)
   }));
 

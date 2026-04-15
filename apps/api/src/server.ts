@@ -6,6 +6,7 @@ import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 import type {
   Asset,
+  AssetInsertionCategory,
   AssetFolder,
   AssetType,
   Channel,
@@ -31,13 +32,59 @@ import {
 import { getChannel, getChannelAssets, getOrCreatePlayoutState, readDb, transaction } from "./db.js";
 import { hasPinataJwt, uploadFileToIpfs } from "./ipfs.js";
 import { createLivepeerStream, hasLivepeerApiKey } from "./livepeer.js";
-import { expandExternalUrls, ingestFromExternalUrl, probeDurationSec, probeMediaKind } from "./media.js";
+import {
+  compressForStreaming,
+  expandExternalUrls,
+  ingestFromExternalUrl,
+  probeDurationSec,
+  probeMediaKind
+} from "./media.js";
 import { nowIso, slugify } from "./utils.js";
 
 const app = express();
 const upload = multer({ dest: path.join(UPLOAD_ROOT, "tmp") });
 
-app.use(cors({ origin: WEB_ORIGIN }));
+function allowedCorsOrigins(): Set<string> {
+  const allowed = new Set<string>();
+  const configured = WEB_ORIGIN.trim();
+  if (!configured) {
+    return allowed;
+  }
+
+  allowed.add(configured);
+
+  try {
+    const base = new URL(configured);
+    if (base.hostname === "localhost") {
+      const alias = new URL(configured);
+      alias.hostname = "127.0.0.1";
+      allowed.add(alias.origin);
+    } else if (base.hostname === "127.0.0.1") {
+      const alias = new URL(configured);
+      alias.hostname = "localhost";
+      allowed.add(alias.origin);
+    }
+  } catch {
+    // Keep only configured origin when URL parsing fails.
+  }
+
+  return allowed;
+}
+
+const corsOrigins = allowedCorsOrigins();
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || corsOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin ${origin} is not allowed by CORS.`));
+    }
+  })
+);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -90,6 +137,30 @@ function normalizeAssetType(value: unknown): AssetType {
   return value === "ad" ? "ad" : "program";
 }
 
+function normalizeInsertionCategory(value: unknown, type: AssetType): AssetInsertionCategory {
+  if (type === "program") {
+    return "program";
+  }
+  if (value === "sponsor" || value === "bumper" || value === "ad") {
+    return value;
+  }
+  return "ad";
+}
+
+function toLibraryScopeId(ownerWallet: string): string {
+  return `library:${ownerWallet}`;
+}
+
+function toStorageScopeId(scopeId: string): string {
+  const normalized = scopeId.trim().toLowerCase();
+  return normalized.replace(/[^a-z0-9_-]/g, "_");
+}
+
+function getCreatorLibraryAssets(db: Pick<DatabaseSchema, "assets">, ownerWallet: string): Asset[] {
+  const scopeId = toLibraryScopeId(ownerWallet);
+  return db.assets.filter((asset) => asset.channelId === scopeId);
+}
+
 function normalizeStreamMode(value: unknown): StreamMode {
   return value === "radio" ? "radio" : "video";
 }
@@ -110,6 +181,17 @@ function normalizePlayerLabel(value: unknown): string | undefined {
 
   const trimmed = value.trim();
   return trimmed ? trimmed.slice(0, 48) : undefined;
+}
+
+function normalizeWalletAddress(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) {
+    return undefined;
+  }
+  return /^0x[a-f0-9]{40}$/.test(trimmed) ? trimmed : undefined;
 }
 
 function normalizeBackgroundUploadPath(value: unknown): string | undefined {
@@ -598,6 +680,7 @@ async function runExternalIngestJob(jobId: string): Promise<void> {
           }
 
           const title = nextItem.title?.trim() || `Imported ${assetId.slice(0, 8)}`;
+          const insertionCategory = normalizeInsertionCategory(undefined, job.type);
           const asset: Asset = {
             id: assetId,
             channelId: job.channelId,
@@ -610,6 +693,7 @@ async function runExternalIngestJob(jobId: string): Promise<void> {
             ipfsUrl,
             durationSec,
             type: job.type,
+            insertionCategory,
             mediaKind,
             createdAt: nowIso()
           };
@@ -755,9 +839,17 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "openchannel-api", at: nowIso() });
 });
 
-app.get("/api/channels", async (_req, res) => {
+app.get("/api/channels", async (req, res) => {
+  const ownerWalletRaw = req.query.ownerWallet;
+  const ownerWalletInput = Array.isArray(ownerWalletRaw) ? ownerWalletRaw[0] : ownerWalletRaw;
+  const ownerWallet = normalizeWalletAddress(ownerWalletInput);
+  if (ownerWalletInput !== undefined && ownerWalletInput !== "" && !ownerWallet) {
+    return sendError(res, 400, "ownerWallet must be a valid wallet address.");
+  }
+
   const db = await readDb();
   const channels = db.channels
+    .filter((channel) => (ownerWallet ? channel.ownerWallet === ownerWallet : true))
     .map((channel) => {
       const assetCount = db.assets.filter((asset) => asset.channelId === channel.id).length;
       const playlistCount = db.playlistItems.filter((item) => item.channelId === channel.id).length;
@@ -766,6 +858,25 @@ app.get("/api/channels", async (_req, res) => {
     .sort((a, b) => a.channel.name.localeCompare(b.channel.name));
 
   res.json({ channels });
+});
+
+app.get("/api/library/assets", async (req, res) => {
+  const ownerWalletRaw = req.query.ownerWallet;
+  const ownerWalletInput = Array.isArray(ownerWalletRaw) ? ownerWalletRaw[0] : ownerWalletRaw;
+  const ownerWallet = normalizeWalletAddress(ownerWalletInput);
+  if (!ownerWallet) {
+    return sendError(res, 400, "ownerWallet query param is required and must be a valid wallet address.");
+  }
+
+  const typeQuery = Array.isArray(req.query.type) ? req.query.type[0] : req.query.type;
+  const typeFilter = typeQuery === "program" || typeQuery === "ad" ? typeQuery : undefined;
+
+  const db = await readDb();
+  const assets = getCreatorLibraryAssets(db, ownerWallet)
+    .filter((asset) => (typeFilter ? asset.type === typeFilter : true))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  res.json({ assets });
 });
 
 app.post("/api/channels", async (req, res) => {
@@ -788,12 +899,18 @@ app.post("/api/channels", async (req, res) => {
   const streamMode = normalizeStreamMode(req.body?.streamMode);
   const brandColor = normalizeBrandColor(req.body?.brandColor) ?? "#00a96b";
   const playerLabel = normalizePlayerLabel(req.body?.playerLabel) ?? name;
+  const ownerWalletInput = req.body?.ownerWallet;
+  const ownerWallet = normalizeWalletAddress(ownerWalletInput);
+  if (ownerWalletInput !== undefined && ownerWalletInput !== "" && !ownerWallet) {
+    return sendError(res, 400, "ownerWallet must be a valid wallet address.");
+  }
 
   const payload = await transaction((db) => {
     const slugBase = requestedSlug || slugify(name) || `channel-${db.channels.length + 1}`;
     const slug = uniqueSlug(slugBase, db.channels);
     const channel: Channel = {
       id: uuidv4(),
+      ownerWallet,
       name,
       slug,
       description,
@@ -853,6 +970,12 @@ app.patch("/api/channels/:channelId", async (req, res) => {
   const slugBody = typeof req.body?.slug === "string" ? slugify(req.body.slug) : undefined;
   const brandColor = normalizeBrandColor(req.body?.brandColor);
   const playerLabel = normalizePlayerLabel(req.body?.playerLabel);
+  const ownerWalletProvided = req.body && Object.prototype.hasOwnProperty.call(req.body, "ownerWallet");
+  const ownerWalletInput = ownerWalletProvided ? req.body?.ownerWallet : undefined;
+  const ownerWallet = ownerWalletProvided ? normalizeWalletAddress(ownerWalletInput) : undefined;
+  if (ownerWalletProvided && ownerWalletInput !== null && ownerWalletInput !== "" && !ownerWallet) {
+    return sendError(res, 400, "ownerWallet must be a valid wallet address.");
+  }
   const streamModeProvided = req.body && Object.prototype.hasOwnProperty.call(req.body, "streamMode");
   const streamMode =
     streamModeProvided && (req.body?.streamMode === "video" || req.body?.streamMode === "radio")
@@ -893,6 +1016,9 @@ app.patch("/api/channels/:channelId", async (req, res) => {
     }
     if (playerLabel) {
       channel.playerLabel = playerLabel;
+    }
+    if (ownerWalletProvided) {
+      channel.ownerWallet = ownerWallet;
     }
     if (streamMode) {
       channel.streamMode = streamMode;
@@ -1175,15 +1301,99 @@ app.delete("/api/schedules/:scheduleId", async (req, res) => {
   res.json(payload);
 });
 
-async function moveUploadedFile(tempPath: string, channelId: string, assetId: string, originalName: string) {
+async function moveUploadedFile(tempPath: string, scopeId: string, assetId: string, originalName: string) {
   const ext = path.extname(originalName || ".mp4") || ".mp4";
-  const channelDir = path.join(UPLOAD_ROOT, channelId);
-  await fs.mkdir(channelDir, { recursive: true });
+  const storageDir = path.join(UPLOAD_ROOT, toStorageScopeId(scopeId));
+  await fs.mkdir(storageDir, { recursive: true });
 
-  const finalPath = path.join(channelDir, `${assetId}${ext.toLowerCase()}`);
+  const finalPath = path.join(storageDir, `${assetId}${ext.toLowerCase()}`);
   await fs.rename(tempPath, finalPath);
   return finalPath;
 }
+
+app.post("/api/library/assets/upload", upload.single("file"), async (req, res) => {
+  if (!req.file) {
+    return sendError(res, 400, "No file uploaded.");
+  }
+
+  const ownerWalletInput = req.body?.ownerWallet;
+  const ownerWallet = normalizeWalletAddress(ownerWalletInput);
+  if (!ownerWallet) {
+    return sendError(res, 400, "ownerWallet is required and must be a valid wallet address.");
+  }
+
+  const libraryScopeId = toLibraryScopeId(ownerWallet);
+  const assetId = uuidv4();
+  const uploadedPath = await moveUploadedFile(req.file.path, libraryScopeId, assetId, req.file.originalname);
+  const mediaKind = await probeMediaKind(uploadedPath);
+  let streamReadyPath = uploadedPath;
+  let originalLocalPath: string | undefined;
+  let compression: Asset["compression"];
+  let compressionWarning: string | undefined;
+
+  try {
+    const compressed = await compressForStreaming(
+      uploadedPath,
+      path.join(UPLOAD_ROOT, toStorageScopeId(libraryScopeId), "compressed"),
+      assetId,
+      mediaKind
+    );
+    streamReadyPath = compressed.outputPath;
+    originalLocalPath = uploadedPath;
+    compression = {
+      tool: "ffmpeg",
+      profile: compressed.profile,
+      compressedAt: nowIso()
+    };
+  } catch (error) {
+    compressionWarning = error instanceof Error ? error.message : "FFmpeg compression failed.";
+  }
+
+  const durationSec = await probeDurationSec(streamReadyPath);
+  const title = String(req.body?.title ?? req.file.originalname ?? `Asset ${assetId.slice(0, 8)}`).trim();
+  const type = normalizeAssetType(req.body?.type);
+  const insertionCategory = normalizeInsertionCategory(req.body?.insertionCategory, type);
+
+  let ipfsCid: string | undefined;
+  let ipfsUrl: string | undefined;
+  let storageProvider: "local" | "ipfs" = "local";
+  let ipfsWarning: string | undefined;
+
+  if (hasPinataJwt()) {
+    try {
+      const pin = await uploadFileToIpfs(streamReadyPath, title);
+      ipfsCid = pin.cid;
+      ipfsUrl = pin.url;
+      storageProvider = "ipfs";
+    } catch (error) {
+      ipfsWarning = error instanceof Error ? error.message : "IPFS upload failed.";
+    }
+  }
+
+  const payload = await transaction((editable) => {
+    const asset: Asset = {
+      id: assetId,
+      channelId: libraryScopeId,
+      title,
+      sourceType: "upload",
+      localPath: streamReadyPath,
+      originalLocalPath,
+      storageProvider,
+      ipfsCid,
+      ipfsUrl,
+      compression,
+      durationSec,
+      type,
+      insertionCategory,
+      mediaKind,
+      createdAt: nowIso()
+    };
+    editable.assets.push(asset);
+    return { asset, ipfsWarning, compressionWarning };
+  });
+
+  res.status(201).json(payload);
+});
 
 app.post("/api/channels/:channelId/assets/upload", upload.single("file"), async (req, res) => {
   if (!req.file) {
@@ -1198,10 +1408,34 @@ app.post("/api/channels/:channelId/assets/upload", upload.single("file"), async 
 
   const assetId = uuidv4();
   const uploadedPath = await moveUploadedFile(req.file.path, channel.id, assetId, req.file.originalname);
-  const durationSec = await probeDurationSec(uploadedPath);
   const mediaKind = await probeMediaKind(uploadedPath);
+  let streamReadyPath = uploadedPath;
+  let originalLocalPath: string | undefined;
+  let compression: Asset["compression"];
+  let compressionWarning: string | undefined;
+
+  try {
+    const compressed = await compressForStreaming(
+      uploadedPath,
+      path.join(UPLOAD_ROOT, toStorageScopeId(channel.id), "compressed"),
+      assetId,
+      mediaKind
+    );
+    streamReadyPath = compressed.outputPath;
+    originalLocalPath = uploadedPath;
+    compression = {
+      tool: "ffmpeg",
+      profile: compressed.profile,
+      compressedAt: nowIso()
+    };
+  } catch (error) {
+    compressionWarning = error instanceof Error ? error.message : "FFmpeg compression failed.";
+  }
+
+  const durationSec = await probeDurationSec(streamReadyPath);
   const title = String(req.body?.title ?? req.file.originalname ?? `Asset ${assetId.slice(0, 8)}`).trim();
   const type = normalizeAssetType(req.body?.type);
+  const insertionCategory = normalizeInsertionCategory(req.body?.insertionCategory, type);
   const folderId = normalizeOptionalFolderId(req.body?.folderId);
   if (folderId && !db.assetFolders.some((folder) => folder.id === folderId && folder.channelId === channel.id)) {
     return sendError(res, 400, "folderId does not belong to this channel.");
@@ -1213,7 +1447,7 @@ app.post("/api/channels/:channelId/assets/upload", upload.single("file"), async 
 
   if (hasPinataJwt()) {
     try {
-      const pin = await uploadFileToIpfs(uploadedPath, title);
+      const pin = await uploadFileToIpfs(streamReadyPath, title);
       ipfsCid = pin.cid;
       ipfsUrl = pin.url;
       storageProvider = "ipfs";
@@ -1228,19 +1462,22 @@ app.post("/api/channels/:channelId/assets/upload", upload.single("file"), async 
       channelId: channel.id,
       title,
       sourceType: "upload",
-      localPath: uploadedPath,
+      localPath: streamReadyPath,
+      originalLocalPath,
       folderId,
       storageProvider,
       ipfsCid,
       ipfsUrl,
+      compression,
       durationSec,
       type,
+      insertionCategory,
       mediaKind,
       createdAt: nowIso()
     };
 
     editable.assets.push(asset);
-    return { asset, ipfsWarning };
+    return { asset, ipfsWarning, compressionWarning };
   });
 
   res.status(201).json(payload);
@@ -1473,12 +1710,13 @@ app.post("/api/channels/:channelId/assets/external", async (req, res) => {
 
   const assetId = uuidv4();
   const type = normalizeAssetType(req.body?.type);
+  const insertionCategory = normalizeInsertionCategory(req.body?.insertionCategory, type);
   const title = String(req.body?.title ?? `Imported ${assetId.slice(0, 8)}`).trim();
   const folderId = normalizeOptionalFolderId(req.body?.folderId);
   if (folderId && !db.assetFolders.some((folder) => folder.id === folderId && folder.channelId === channel.id)) {
     return sendError(res, 400, "folderId does not belong to this channel.");
   }
-  const channelDir = path.join(UPLOAD_ROOT, channel.id);
+  const channelDir = path.join(UPLOAD_ROOT, toStorageScopeId(channel.id));
 
   try {
     const localPath = await ingestFromExternalUrl(url, channelDir, assetId);
@@ -1513,6 +1751,7 @@ app.post("/api/channels/:channelId/assets/external", async (req, res) => {
         ipfsUrl,
         durationSec,
         type,
+        insertionCategory,
         mediaKind,
         createdAt: nowIso()
       };
@@ -1530,6 +1769,8 @@ app.post("/api/channels/:channelId/assets/external", async (req, res) => {
 app.patch("/api/assets/:assetId", async (req, res) => {
   const title = typeof req.body?.title === "string" ? req.body.title.trim() : undefined;
   const type = req.body?.type;
+  const insertionCategoryProvided = req.body && Object.prototype.hasOwnProperty.call(req.body, "insertionCategory");
+  const insertionCategoryInput = insertionCategoryProvided ? req.body?.insertionCategory : undefined;
   const folderProvided = req.body && Object.prototype.hasOwnProperty.call(req.body, "folderId");
   const folderId = folderProvided ? normalizeOptionalFolderId(req.body?.folderId) : undefined;
 
@@ -1547,7 +1788,12 @@ app.patch("/api/assets/:assetId", async (req, res) => {
     }
 
     if (title) asset.title = title;
-    if (type === "program" || type === "ad") asset.type = type;
+    if (type === "program" || type === "ad") {
+      asset.type = type;
+      asset.insertionCategory = normalizeInsertionCategory(insertionCategoryInput, asset.type);
+    } else if (insertionCategoryProvided) {
+      asset.insertionCategory = normalizeInsertionCategory(insertionCategoryInput, asset.type);
+    }
     if (folderProvided) asset.folderId = folderId;
     return { asset };
   });
@@ -1569,10 +1815,28 @@ app.delete("/api/assets/:assetId", async (req, res) => {
     const [asset] = db.assets.splice(index, 1);
     db.playlistItems = db.playlistItems.filter((item) => item.assetId !== asset.id);
 
-    try {
-      await fs.unlink(asset.localPath);
-    } catch {
-      // Ignore missing files in local MVP mode.
+    const localPathStillReferenced = db.assets.some(
+      (entry) => entry.localPath === asset.localPath || entry.originalLocalPath === asset.localPath
+    );
+    if (!localPathStillReferenced) {
+      try {
+        await fs.unlink(asset.localPath);
+      } catch {
+        // Ignore missing files in local MVP mode.
+      }
+    }
+
+    if (asset.originalLocalPath && asset.originalLocalPath !== asset.localPath) {
+      const originalPathStillReferenced = db.assets.some(
+        (entry) => entry.localPath === asset.originalLocalPath || entry.originalLocalPath === asset.originalLocalPath
+      );
+      if (!originalPathStillReferenced) {
+        try {
+          await fs.unlink(asset.originalLocalPath);
+        } catch {
+          // Ignore missing files in local MVP mode.
+        }
+      }
     }
 
     return { deleted: asset.id };
@@ -1583,6 +1847,59 @@ app.delete("/api/assets/:assetId", async (req, res) => {
   }
 
   res.json(payload);
+});
+
+app.post("/api/channels/:channelId/library/import", async (req, res) => {
+  const assetIds: string[] | null = Array.isArray(req.body?.assetIds)
+    ? req.body.assetIds.map((value: unknown) => String(value).trim()).filter(Boolean)
+    : null;
+  if (!assetIds || assetIds.length === 0) {
+    return sendError(res, 400, "assetIds array is required.");
+  }
+
+  const ownerWalletInput = req.body?.ownerWallet;
+  const ownerWallet = normalizeWalletAddress(ownerWalletInput);
+  if (!ownerWallet) {
+    return sendError(res, 400, "ownerWallet is required and must be a valid wallet address.");
+  }
+
+  const payload = await transaction((db) => {
+    const channel = getChannel(db, req.params.channelId);
+    if (!channel) {
+      return { error: "Channel not found." };
+    }
+
+    if (channel.ownerWallet && channel.ownerWallet !== ownerWallet) {
+      return { error: "Channel owner wallet does not match ownerWallet." };
+    }
+
+    const libraryAssets = getCreatorLibraryAssets(db, ownerWallet);
+    const libraryById = new Map(libraryAssets.map((asset) => [asset.id, asset]));
+    const missing = assetIds.find((assetId) => !libraryById.has(assetId));
+    if (missing) {
+      return { error: `Library asset not found: ${missing}` };
+    }
+
+    const importedAssets = assetIds.map((assetId) => {
+      const source = libraryById.get(assetId)!;
+      const clone: Asset = {
+        ...source,
+        id: uuidv4(),
+        channelId: channel.id,
+        createdAt: nowIso()
+      };
+      db.assets.push(clone);
+      return clone;
+    });
+
+    return { assets: importedAssets };
+  });
+
+  if (hasError(payload)) {
+    return sendError(res, 400, payload.error);
+  }
+
+  res.status(201).json(payload);
 });
 
 app.get("/api/channels/:channelId/playlist", async (req, res) => {
@@ -1914,8 +2231,8 @@ app.delete("/api/destinations/:destinationId", async (req, res) => {
 
 app.post("/api/channels/:channelId/control", async (req: Request, res: Response) => {
   const action = String(req.body?.action ?? "");
-  if (action !== "start" && action !== "stop" && action !== "skip") {
-    return sendError(res, 400, "action must be start|stop|skip");
+  if (action !== "start" && action !== "stop" && action !== "skip" && action !== "previous") {
+    return sendError(res, 400, "action must be start|stop|skip|previous");
   }
 
   let livepeerProvisionError: string | undefined;
@@ -1957,6 +2274,7 @@ app.post("/api/channels/:channelId/control", async (req: Request, res: Response)
       state.lastAdAt = nowIso();
     }
     if (action === "stop") state.isRunning = false;
+    if (action === "previous") state.queueIndex -= 1;
     if (action === "start" && livepeerProvisionError) {
       state.lastError = `Livepeer setup error: ${livepeerProvisionError}`;
     }

@@ -1,26 +1,21 @@
-import { Navigate, Route, Routes, useParams } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import AppHeader from "./components/AppHeader";
-import HomePage from "./pages/HomePage";
-import StudioDashboardPage from "./pages/StudioDashboardPage";
-import StudioPage from "./pages/StudioPage";
-import WatchPage from "./pages/WatchPage";
-
-function LegacyWatchRedirect() {
-  const { channelId } = useParams();
-  return <Navigate to={channelId ? `/station/${channelId}` : "/"} replace />;
-}
+import CreatorDashboardPage from "./pages/CreatorDashboardPage";
+import LoginPage from "./pages/LoginPage";
+import StationManagerPage from "./pages/StationManagerPage";
+import StationPreviewPage from "./pages/StationPreviewPage";
 
 export default function App() {
   return (
-    <div className="appShell">
+    <div className="min-h-screen bg-slate-950 text-slate-100">
       <AppHeader />
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/explore" element={<Navigate to="/" replace />} />
-        <Route path="/station/:channelId" element={<WatchPage />} />
-        <Route path="/watch/:channelId" element={<LegacyWatchRedirect />} />
-        <Route path="/studio" element={<StudioDashboardPage />} />
-        <Route path="/studio/:channelId" element={<StudioPage />} />
+        <Route path="/" element={<LoginPage />} />
+        <Route path="/dashboard" element={<CreatorDashboardPage />} />
+        <Route path="/studio" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/stations/:channelId" element={<StationManagerPage />} />
+        <Route path="/stations/:channelId/preview" element={<StationPreviewPage />} />
+        <Route path="/station/:channelId" element={<StationPreviewPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>

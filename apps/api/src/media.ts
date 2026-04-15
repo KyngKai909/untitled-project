@@ -345,6 +345,93 @@ export async function probeMediaKind(filePath: string): Promise<"video" | "audio
   return guessMediaKindFromPath(filePath);
 }
 
+export interface CompressionResult {
+  outputPath: string;
+  profile: "h264_aac_720p" | "aac_audio";
+}
+
+export async function compressForStreaming(
+  inputPath: string,
+  outputDir: string,
+  baseName: string,
+  mediaKind: "video" | "audio"
+): Promise<CompressionResult> {
+  await fs.mkdir(outputDir, { recursive: true });
+
+  if (mediaKind === "audio") {
+    const outputPath = path.join(outputDir, `${baseName}.m4a`);
+    const result = await runCommand(
+      "ffmpeg",
+      [
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-i",
+        inputPath,
+        "-vn",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "128k",
+        outputPath
+      ],
+      { timeoutMs: 20 * 60 * 1000 }
+    );
+
+    if (result.code !== 0) {
+      throw new Error(`FFmpeg audio compression failed. ${result.stderr.slice(-320)}`);
+    }
+
+    return {
+      outputPath,
+      profile: "aac_audio"
+    };
+  }
+
+  const outputPath = path.join(outputDir, `${baseName}.mp4`);
+  const result = await runCommand(
+    "ffmpeg",
+    [
+      "-y",
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
+      inputPath,
+      "-map",
+      "0:v:0",
+      "-map",
+      "0:a?",
+      "-vf",
+      "scale=w=1280:h=-2:force_original_aspect_ratio=decrease",
+      "-c:v",
+      "libx264",
+      "-preset",
+      "veryfast",
+      "-crf",
+      "23",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "128k",
+      "-movflags",
+      "+faststart",
+      outputPath
+    ],
+    { timeoutMs: 20 * 60 * 1000 }
+  );
+
+  if (result.code !== 0) {
+    throw new Error(`FFmpeg video compression failed. ${result.stderr.slice(-320)}`);
+  }
+
+  return {
+    outputPath,
+    profile: "h264_aac_720p"
+  };
+}
+
 export async function expandExternalUrls(url: string, options: { signal?: AbortSignal } = {}): Promise<string[]> {
   const source = url.trim();
   if (!source) {

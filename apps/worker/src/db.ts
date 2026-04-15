@@ -88,6 +88,10 @@ export async function readDb(): Promise<DatabaseSchema> {
 
   const normalizedChannels = (parsed.channels ?? []).map((channel) => ({
     ...channel,
+    ownerWallet:
+      typeof channel.ownerWallet === "string" && /^0x[a-fA-F0-9]{40}$/.test(channel.ownerWallet.trim())
+        ? channel.ownerWallet.trim().toLowerCase()
+        : undefined,
     adInterval: Number.isFinite(channel.adInterval) ? Math.max(0, Math.floor(channel.adInterval)) : 2,
     adTriggerMode: normalizeAdTriggerMode(channel.adTriggerMode),
     adTimeIntervalSec: Number.isFinite(channel.adTimeIntervalSec)

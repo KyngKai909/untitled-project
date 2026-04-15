@@ -1,0 +1,184 @@
+{
+  "channels": [
+    {
+      "id": "3de09b66-fda7-4ec7-9de7-065f98ff19af",
+      "name": "Test Station",
+      "slug": "test-station",
+      "description": "Just a test",
+      "adInterval": 2,
+      "createdAt": "2026-02-19T08:46:26.383Z",
+      "updatedAt": "2026-02-19T09:11:03.827Z",
+      "brandColor": "#ff5f3a",
+      "playerLabel": "Test Brand"
+    }
+  ],
+  "assets": [
+    {
+      "id": "eb9c2f0b-ceec-4dfc-a84b-147194630e27",
+      "channelId": "3de09b66-fda7-4ec7-9de7-065f98ff19af",
+      "title": "SpongeBob Episode",
+      "sourceType": "upload",
+      "localPath": "/Users/kyngkai909/Documents/GitHub/untitled-project/storage/uploads/3de09b66-fda7-4ec7-9de7-065f98ff19af/eb9c2f0b-ceec-4dfc-a84b-147194630e27.mp4",
+      "storageProvider": "local",
+      "durationSec": 679,
+      "type": "program",
+      "createdAt": "2026-02-19T17:13:27.257Z"
+    },
+    {
+      "id": "7d441f24-5b4d-4d33-b0d8-42a127d88671",
+      "channelId": "3de09b66-fda7-4ec7-9de7-065f98ff19af",
+      "title": "Kappa Mikey S1E8",
+      "sourceType": "upload",
+      "localPath": "/Users/kyngkai909/Documents/GitHub/untitled-project/storage/uploads/3de09b66-fda7-4ec7-9de7-065f98ff19af/7d441f24-5b4d-4d33-b0d8-42a127d88671.mp4",
+      "storageProvider": "local",
+      "durationSec": 1416,
+      "type": "program",
+      "createdAt": "2026-02-19T17:48:09.955Z"
+    },
+    {
+      "id": "8772663b-9974-45a5-b9ed-2405adb018d7",
+      "channelId": "3de09b66-fda7-4ec7-9de7-065f98ff19af",
+      "title": "Kappa Mikey S1E3",
+      "sourceType": "upload",
+      "localPath": "/Users/kyngkai909/Documents/GitHub/untitled-project/storage/uploads/3de09b66-fda7-4ec7-9de7-065f98ff19af/8772663b-9974-45a5-b9ed-2405adb018d7.mp4",
+      "storageProvider": "local",
+      "durationSec": 1419,
+      "type": "program",
+      "createdAt": "2026-02-19T17:48:32.412Z"
+    },
+    {
+      "id": "5d59b6c0-dd05-4456-b62c-8a0fb947566b",
+      "channelId": "3de09b66-fda7-4ec7-9de7-065f98ff19af",
+      "title": "Far Cry 5: The Movie",
+      "sourceType": "external",
+      "sourceUrl": "https://www.youtube.com/watch?v=-y4y8rHxjXE",
+      "localPath": "/Users/kyngkai909/Documents/GitHub/untitled-project/storage/uploads/3de09b66-fda7-4ec7-9de7-065f98ff19af/5d59b6c0-dd05-4456-b62c-8a0fb947566b.mp4",
+      "storageProvider": "local",
+      "durationSec": 14709,
+      "type": "program",
+      "createdAt": "2026-02-19T22:35:29.125Z"
+    },
+    {
+      "id": "719a3f81-f68b-4383-aad1-d014e865e0a3",
+      "channelId": "3de09b66-fda7-4ec7-9de7-065f98ff19af",
+      "title": "Far Cry New Dawn: The Movie",
+      "sourceType": "external",
+      "sourceUrl": "https://www.youtube.com/watch?v=VHlgauM5OTk",
+      "localPath": "/Users/kyngkai909/Documents/GitHub/untitled-project/storage/uploads/3de09b66-fda7-4ec7-9de7-065f98ff19af/719a3f81-f68b-4383-aad1-d014e865e0a3.mp4",
+      "storageProvider": "local",
+      "durationSec": 8597,
+      "type": "program",
+      "createdAt": "2026-02-19T23:13:07.794Z"
+    }
+  ],
+  "assetFolders": [],
+  "playlistItems": [
+    {
+      "id": "7755b2cf-1db7-4dd5-85c9-e141696dd055",
+      "channelId": "3de09b66-fda7-4ec7-9de7-065f98ff19af",
+      "assetId": "eb9c2f0b-ceec-4dfc-a84b-147194630e27",
+      "position": 0,
+      "createdAt": "2026-02-20T00:46:07.331Z"
+    },
+    {
+      "id": "178c1eee-b9da-458b-b8a7-f2285e03a20a",
+      "channelId": "3de09b66-fda7-4ec7-9de7-065f98ff19af",
+      "assetId": "8772663b-9974-45a5-b9ed-2405adb018d7",
+      "position": 1,
+      "createdAt": "2026-02-20T00:46:07.331Z"
+    },
+    {
+      "id": "2ef2d779-59bb-47b2-975e-6b2c7553e806",
+      "channelId": "3de09b66-fda7-4ec7-9de7-065f98ff19af",
+      "assetId": "7d441f24-5b4d-4d33-b0d8-42a127d88671",
+      "position": 2,
+      "createdAt": "2026-02-20T00:46:07.331Z"
+    },
+    {
+      "id": "23248224-6260-45d4-8781-dc6386b9fea2",
+      "channelId": "3de09b66-fda7-4ec7-9de7-065f98ff19af",
+      "assetId": "5d59b6c0-dd05-4456-b62c-8a0fb947566b",
+      "position": 3,
+      "createdAt": "2026-02-20T00:46:07.331Z"
+    },
+    {
+      "id": "0c09d551-42d9-40bb-a118-2806a30f805f",
+      "channelId": "3de09b66-fda7-4ec7-9de7-065f98ff19af",
+      "assetId": "719a3f81-f68b-4383-aad1-d014e865e0a3",
+      "position": 4,
+      "createdAt": "2026-02-20T00:46:07.331Z"
+    }
+  ],
+  "playoutStates": [
+    {
+      "channelId": "3de09b66-fda7-4ec7-9de7-065f98ff19af",
+      "isRunning": true,
+      "queueIndex": 1,
+      "programCountSinceAd": 1,
+      "updatedAt": "2026-02-20T01:37:31.262Z",
+      "currentAssetId": "8772663b-9974-45a5-b9ed-2405adb018d7",
+      "currentAssetTitle": "Kappa Mikey S1E3",
+      "currentStartedAt": "2026-02-20T01:37:31.262Z"
+    }
+  ],
+  "commands": [],
+  "streamSchedules": [
+    {
+      "id": "83203d08-890f-4353-a891-2c688d4b6426",
+      "channelId": "3de09b66-fda7-4ec7-9de7-065f98ff19af",
+      "startAt": "2026-02-20T01:00:00.000Z",
+      "enabled": true,
+      "createdAt": "2026-02-20T00:45:39.499Z",
+      "updatedAt": "2026-02-20T01:01:37.968Z",
+      "startedAt": "2026-02-20T01:01:37.968Z"
+    }
+  ],
+  "destinations": [],
+  "livepeerConfigs": [
+    {
+      "channelId": "3de09b66-fda7-4ec7-9de7-065f98ff19af",
+      "enabled": true,
+      "updatedAt": "2026-02-19T09:53:16.543Z",
+      "streamId": "3ac14354-63f9-4dc9-b45b-a383612c37ee",
+      "streamKey": "3ac1-70jm-hmu8-08wh",
+      "playbackId": "3ac1kqldysll0mqc",
+      "playbackUrl": "https://livepeercdn.studio/hls/3ac1kqldysll0mqc/index.m3u8",
+      "ingestUrl": "rtmp://rtmp.livepeer.com/live/3ac1-70jm-hmu8-08wh"
+    }
+  ],
+  "externalIngestJobs": [
+    {
+      "id": "ade7ba02-b82b-4fcb-86e5-ba04e43b31c1",
+      "channelId": "3de09b66-fda7-4ec7-9de7-065f98ff19af",
+      "type": "program",
+      "titlePrefix": "Infamous: Second Son",
+      "requestedUrls": [
+        "https://www.youtube.com/watch?v=KoSbm-Gsih4"
+      ],
+      "expandedUrls": [
+        "https://www.youtube.com/watch?v=KoSbm-Gsih4"
+      ],
+      "expandPlaylists": false,
+      "status": "failed",
+      "progressPct": 100,
+      "createdAt": "2026-02-20T01:22:17.837Z",
+      "updatedAt": "2026-02-20T01:37:33.602Z",
+      "items": [
+        {
+          "id": "ea5c7459-d2fa-4929-b1e4-c0cc4262d1e0",
+          "sourceUrl": "https://www.youtube.com/watch?v=KoSbm-Gsih4",
+          "title": "Infamous: Second Son",
+          "status": "failed",
+          "progressPct": 100,
+          "createdAt": "2026-02-20T01:22:17.842Z",
+          "updatedAt": "2026-02-20T01:37:33.599Z",
+          "startedAt": "2026-02-20T01:22:17.845Z",
+          "finishedAt": "2026-02-20T01:37:33.599Z",
+          "error": "yt-dlp failed to extract this URL. Details: ERROR: Postprocessing: Conversion failed!"
+        }
+      ],
+      "startedAt": "2026-02-20T01:22:17.840Z",
+      "finishedAt": "2026-02-20T01:37:33.602Z"
+    }
+  ]
+}

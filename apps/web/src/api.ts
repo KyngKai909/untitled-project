@@ -1,14 +1,12 @@
 import type {
-  AdTriggerMode,
+  Asset,
+  AssetInsertionCategory,
   AssetType,
-  AssetFolder,
+  Channel,
   ChannelDetail,
   ChannelSummary,
-  ExternalIngestJob,
-  ExternalIngestItem,
   LivepeerStatus,
   PlayoutState,
-  PlaylistItem,
   StreamMode,
   StreamSchedule
 } from "./types";
@@ -37,7 +35,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const payload = isJson ? await response.json() : null;
 
   if (!response.ok) {
-    throw new ApiError(response.status, payload?.error ?? `Request failed with ${response.status}`);
+    throw new ApiError(response.status, payload?.error ?? `Request failed (${response.status})`);
   }
 
   return payload as T;
@@ -47,24 +45,43 @@ export function getApiBase(): string {
   return API_BASE;
 }
 
-export async function listChannels(): Promise<ChannelSummary[]> {
-  const payload = await request<{ channels: ChannelSummary[] }>("/api/channels");
+export async function listChannels(ownerWallet?: string): Promise<ChannelSummary[]> {
+  const query = ownerWallet ? `?ownerWallet=${encodeURIComponent(ownerWallet)}` : "";
+  const payload = await request<{ channels: ChannelSummary[] }>(`/api/channels${query}`);
   return payload.channels;
 }
 
 export async function createChannel(input: {
+  ownerWallet: string;
   name: string;
   description?: string;
-  slug?: string;
-  adInterval?: number;
-  adTriggerMode?: AdTriggerMode;
-  adTimeIntervalSec?: number;
   brandColor?: string;
-  playerLabel?: string;
   streamMode?: StreamMode;
 }) {
-  return request<{ channel: ChannelSummary["channel"] }>("/api/channels", {
+  return request<{ channel: Channel }>(`/api/channels`, {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(input)
+  });
+}
+
+export async function patchChannel(
+  channelId: string,
+  input: {
+    name?: string;
+    description?: string;
+    brandColor?: string;
+    playerLabel?: string;
+    streamMode?: StreamMode;
+    adTriggerMode?: "disabled" | "every_n_programs" | "time_interval";
+    adInterval?: number;
+    adTimeIntervalSec?: number;
+  }
+) {
+  return request<{ channel: Channel }>(`/api/channels/${channelId}`, {
+    method: "PATCH",
     headers: {
       "Content-Type": "application/json"
     },
@@ -76,23 +93,66 @@ export async function getChannelDetail(channelId: string): Promise<ChannelDetail
   return request<ChannelDetail>(`/api/channels/${channelId}`);
 }
 
-export async function patchChannel(
+export async function uploadAsset(
   channelId: string,
-  input: {
-    name?: string;
-    description?: string;
-    adInterval?: number;
-    adTriggerMode?: AdTriggerMode;
-    adTimeIntervalSec?: number;
-    slug?: string;
-    brandColor?: string;
-    playerLabel?: string;
-    streamMode?: StreamMode;
-    radioBackgroundUrl?: string | null;
+  input: { file: File; title?: string; type: AssetType; insertionCategory?: AssetInsertionCategory }
+): Promise<{ asset: Asset; ipfsWarning?: string; compressionWarning?: string }> {
+  const form = new FormData();
+  form.set("file", input.file);
+  if (input.title?.trim()) {
+    form.set("title", input.title.trim());
   }
-) {
-  return request<{ channel: ChannelSummary["channel"] }>(`/api/channels/${channelId}`, {
-    method: "PATCH",
+  form.set("type", input.type);
+  if (input.insertionCategory) {
+    form.set("insertionCategory", input.insertionCategory);
+  }
+
+  return request(`/api/channels/${channelId}/assets/upload`, {
+    method: "POST",
+    body: form
+  });
+}
+
+export async function listLibraryAssets(ownerWallet: string, type?: AssetType): Promise<Asset[]> {
+  const params = new URLSearchParams();
+  params.set("ownerWallet", ownerWallet);
+  if (type) {
+    params.set("type", type);
+  }
+  const payload = await request<{ assets: Asset[] }>(`/api/library/assets?${params.toString()}`);
+  return payload.assets;
+}
+
+export async function uploadLibraryAsset(input: {
+  ownerWallet: string;
+  file: File;
+  title?: string;
+  type: AssetType;
+  insertionCategory?: AssetInsertionCategory;
+}): Promise<{ asset: Asset; ipfsWarning?: string; compressionWarning?: string }> {
+  const form = new FormData();
+  form.set("ownerWallet", input.ownerWallet);
+  form.set("file", input.file);
+  form.set("type", input.type);
+  if (input.title?.trim()) {
+    form.set("title", input.title.trim());
+  }
+  if (input.insertionCategory) {
+    form.set("insertionCategory", input.insertionCategory);
+  }
+
+  return request(`/api/library/assets/upload`, {
+    method: "POST",
+    body: form
+  });
+}
+
+export async function importLibraryAssetsToChannel(
+  channelId: string,
+  input: { ownerWallet: string; assetIds: string[] }
+): Promise<{ assets: Asset[] }> {
+  return request(`/api/channels/${channelId}/library/import`, {
+    method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
@@ -100,25 +160,53 @@ export async function patchChannel(
   });
 }
 
-export async function uploadRadioBackground(channelId: string, file: File) {
-  const form = new FormData();
-  form.set("file", file);
+export async function deleteAsset(assetId: string): Promise<{ deleted: string }> {
+  return request(`/api/assets/${assetId}`, {
+    method: "DELETE"
+  });
+}
 
-  return request<{ channel: ChannelSummary["channel"] }>(`/api/channels/${channelId}/radio/background`, {
+export async function putPlaylist(channelId: string, assetIds: string[]): Promise<{ playlist: unknown[] }> {
+  return request(`/api/channels/${channelId}/playlist`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ assetIds })
+  });
+}
+
+export async function listStreamSchedules(channelId: string): Promise<StreamSchedule[]> {
+  const payload = await request<{ schedules: StreamSchedule[] }>(`/api/channels/${channelId}/schedules`);
+  return payload.schedules;
+}
+
+export async function createStreamSchedule(
+  channelId: string,
+  input: { startAt: string; endAt?: string; enabled?: boolean }
+): Promise<{ schedule: StreamSchedule }> {
+  return request(`/api/channels/${channelId}/schedules`, {
     method: "POST",
-    body: form
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(input)
+  });
+}
+
+export async function deleteStreamSchedule(scheduleId: string): Promise<{ deleted: string }> {
+  return request(`/api/schedules/${scheduleId}`, {
+    method: "DELETE"
   });
 }
 
 export async function getChannelStatus(
   channelId: string
 ): Promise<{ state: PlayoutState; streamUrl: string; livepeer?: LivepeerStatus }> {
-  return request<{ state: PlayoutState; streamUrl: string; livepeer?: LivepeerStatus }>(
-    `/api/channels/${channelId}/status`
-  );
+  return request(`/api/channels/${channelId}/status`);
 }
 
-export async function sendChannelControl(channelId: string, action: "start" | "stop" | "skip") {
+export async function sendChannelControl(channelId: string, action: "start" | "stop" | "skip" | "previous") {
   return request<{ state: PlayoutState }>(`/api/channels/${channelId}/control`, {
     method: "POST",
     headers: {
@@ -128,235 +216,23 @@ export async function sendChannelControl(channelId: string, action: "start" | "s
   });
 }
 
-export async function uploadAsset(channelId: string, input: { file: File; title?: string; type: AssetType }) {
-  const form = new FormData();
-  form.set("file", input.file);
-  if (input.title?.trim()) {
-    form.set("title", input.title.trim());
-  }
-  form.set("type", input.type);
-
-  return request(`/api/channels/${channelId}/assets/upload`, {
-    method: "POST",
-    body: form
-  });
+export async function getLivepeerStatus(
+  channelId: string
+): Promise<{ livepeer?: LivepeerStatus; configured: boolean }> {
+  return request(`/api/channels/${channelId}/livepeer`);
 }
 
-export async function ingestExternal(channelId: string, input: { url: string; title?: string; type: AssetType }) {
-  return request(`/api/channels/${channelId}/assets/external`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(input)
-  });
-}
-
-export async function queueExternalIngestJob(
-  channelId: string,
-  input: { urls: string[]; titlePrefix?: string; type: AssetType; expandPlaylists?: boolean }
-) {
-  return request<{ job: ExternalIngestJob }>(`/api/channels/${channelId}/assets/external/jobs`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(input)
-  });
-}
-
-export async function listExternalIngestJobs(channelId: string, limit = 20): Promise<ExternalIngestJob[]> {
-  const payload = await request<{ jobs: ExternalIngestJob[] }>(
-    `/api/channels/${channelId}/assets/external/jobs?limit=${Math.max(1, Math.floor(limit))}`
-  );
-  return payload.jobs;
-}
-
-export async function patchExternalIngestJobItem(
-  channelId: string,
-  jobId: string,
-  itemId: string,
-  input: { title?: string }
-) {
-  return request<{ item: ExternalIngestItem }>(
-    `/api/channels/${channelId}/assets/external/jobs/${jobId}/items/${itemId}`,
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(input)
-    }
-  );
-}
-
-export async function cancelExternalIngestJob(channelId: string, jobId: string) {
-  return request<{ job: ExternalIngestJob }>(`/api/channels/${channelId}/assets/external/jobs/${jobId}/cancel`, {
+export async function provisionLivepeer(channelId: string): Promise<{ livepeer?: LivepeerStatus }> {
+  return request(`/api/channels/${channelId}/livepeer/provision`, {
     method: "POST"
   });
 }
 
-export async function deleteExternalIngestJob(channelId: string, jobId: string) {
-  return request<{ deleted: string }>(`/api/channels/${channelId}/assets/external/jobs/${jobId}`, {
-    method: "DELETE"
-  });
-}
-
-export async function patchAsset(assetId: string, input: { title?: string; type?: AssetType; folderId?: string | null }) {
-  return request(`/api/assets/${assetId}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(input)
-  });
-}
-
-export async function deleteAsset(assetId: string) {
-  return request(`/api/assets/${assetId}`, {
-    method: "DELETE"
-  });
-}
-
-export async function createFolder(channelId: string, input: { name: string; parentFolderId?: string | null }) {
-  return request<{ folder: AssetFolder }>(`/api/channels/${channelId}/folders`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(input)
-  });
-}
-
-export async function patchFolder(
-  folderId: string,
-  input: {
-    name?: string;
-    parentFolderId?: string | null;
-  }
-) {
-  return request<{ folder: AssetFolder }>(`/api/folders/${folderId}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(input)
-  });
-}
-
-export async function deleteFolder(folderId: string) {
-  return request<{ deleted: string }>(`/api/folders/${folderId}`, {
-    method: "DELETE"
-  });
-}
-
-export async function createStreamSchedule(
+export async function setLivepeerEnabled(
   channelId: string,
-  input: { startAt: string; endAt?: string; enabled?: boolean }
-) {
-  return request<{ schedule: StreamSchedule }>(`/api/channels/${channelId}/schedules`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(input)
-  });
-}
-
-export async function patchStreamSchedule(
-  scheduleId: string,
-  input: { startAt?: string; endAt?: string | null; enabled?: boolean }
-) {
-  return request<{ schedule: StreamSchedule }>(`/api/schedules/${scheduleId}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(input)
-  });
-}
-
-export async function deleteStreamSchedule(scheduleId: string) {
-  return request<{ deleted: string }>(`/api/schedules/${scheduleId}`, {
-    method: "DELETE"
-  });
-}
-
-export async function listStreamSchedules(channelId: string): Promise<StreamSchedule[]> {
-  const payload = await request<{ schedules: StreamSchedule[] }>(`/api/channels/${channelId}/schedules`);
-  return payload.schedules;
-}
-
-export async function putPlaylist(channelId: string, assetIds: string[]) {
-  return request<{ playlist: PlaylistItem[] }>(`/api/channels/${channelId}/playlist`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ assetIds })
-  });
-}
-
-export async function addPlaylistItem(channelId: string, assetId: string) {
-  return request(`/api/channels/${channelId}/playlist/items`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ assetId })
-  });
-}
-
-export async function deletePlaylistItem(channelId: string, itemId: string) {
-  return request(`/api/channels/${channelId}/playlist/items/${itemId}`, {
-    method: "DELETE"
-  });
-}
-
-export async function createDestination(
-  channelId: string,
-  input: { name: string; rtmpUrl: string; streamKey: string }
-) {
-  return request(`/api/channels/${channelId}/destinations`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(input)
-  });
-}
-
-export async function patchDestination(
-  destinationId: string,
-  input: { name?: string; rtmpUrl?: string; streamKey?: string; enabled?: boolean }
-) {
-  return request(`/api/destinations/${destinationId}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(input)
-  });
-}
-
-export async function deleteDestination(destinationId: string) {
-  return request(`/api/destinations/${destinationId}`, {
-    method: "DELETE"
-  });
-}
-
-export async function getLivepeerStatus(channelId: string) {
-  return request<{ livepeer?: LivepeerStatus; configured: boolean }>(`/api/channels/${channelId}/livepeer`);
-}
-
-export async function provisionLivepeer(channelId: string) {
-  return request<{ livepeer?: LivepeerStatus }>(`/api/channels/${channelId}/livepeer/provision`, {
-    method: "POST"
-  });
-}
-
-export async function setLivepeerEnabled(channelId: string, enabled: boolean) {
-  return request<{ livepeer?: LivepeerStatus }>(`/api/channels/${channelId}/livepeer`, {
+  enabled: boolean
+): Promise<{ livepeer?: LivepeerStatus }> {
+  return request(`/api/channels/${channelId}/livepeer`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json"

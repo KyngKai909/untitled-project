@@ -2,9 +2,11 @@ export type AssetType = "program" | "ad";
 export type StreamMode = "video" | "radio";
 export type AssetMediaKind = "video" | "audio";
 export type AdTriggerMode = "disabled" | "every_n_programs" | "time_interval";
+export type AssetInsertionCategory = "program" | "ad" | "sponsor" | "bumper";
 
 export interface Channel {
   id: string;
+  ownerWallet?: string;
   name: string;
   slug: string;
   description: string;
@@ -26,14 +28,23 @@ export interface Asset {
   sourceType: "upload" | "external";
   sourceUrl?: string;
   localPath: string;
+  originalLocalPath?: string;
   folderId?: string;
   storageProvider?: "local" | "ipfs";
   ipfsCid?: string;
   ipfsUrl?: string;
+  compression?: AssetCompression;
   durationSec?: number;
   type: AssetType;
+  insertionCategory?: AssetInsertionCategory;
   mediaKind: AssetMediaKind;
   createdAt: string;
+}
+
+export interface AssetCompression {
+  tool: "ffmpeg";
+  profile: "h264_aac_720p" | "aac_audio";
+  compressedAt: string;
 }
 
 export interface PlaylistItem {
@@ -60,7 +71,7 @@ export interface PlayoutState {
 export interface PlayoutCommand {
   id: string;
   channelId: string;
-  action: "start" | "stop" | "skip";
+  action: "start" | "stop" | "skip" | "previous";
   createdAt: string;
 }
 

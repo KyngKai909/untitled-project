@@ -415,7 +415,9 @@ async function applyCommand(command: PlayoutCommand) {
     return;
   }
 
-  runtimeFor(command.channelId).skip();
+  if (command.action === "skip" || command.action === "previous") {
+    runtimeFor(command.channelId).skip();
+  }
 }
 
 let pollInFlight = false;
