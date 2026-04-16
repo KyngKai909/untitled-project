@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@openchannel/shared": "0.1.0",
-    "pg": "^8.20.0"
+    "pg": "^8.20.0",
+    "redis": "^4.7.1"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",

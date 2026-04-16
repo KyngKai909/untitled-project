@@ -148,7 +148,7 @@ railway variables --service @openchannel/web --environment production \
 #### Required runtime variables
 
 - `@openchannel/api`: `DATABASE_URL`, `STORAGE_ROOT=/data/storage`, `WEB_ORIGIN=<web-service-url>`, `UPLOAD_STORAGE_MODE=ipfs` (recommended), `DELETE_LOCAL_AFTER_IPFS=true`, `PINATA_JWT`, `LIVEPEER_API_KEY` (optional)
-- `@openchannel/worker`: `DATABASE_URL`, `STORAGE_ROOT=/data/storage`, `MEDIA_BASE_URL=<api-service-url>`, `WORKER_POLL_INTERVAL_MS` (optional)
+- `@openchannel/worker`: `DATABASE_URL`, `REDIS_URL` (recommended), `STORAGE_ROOT=/data/storage`, `MEDIA_BASE_URL=<api-service-url>`, `WORKER_POLL_INTERVAL_MS` (optional), `REDIS_WORKER_LEADER_KEY` (optional), `REDIS_WORKER_LEASE_SEC` (optional)
 - `@openchannel/web`: `API_PROXY_BASE_URL=<api-service-url>` (recommended), `VITE_API_BASE=<api-service-url>` (optional build-time override)
 
 #### Domains
@@ -175,7 +175,7 @@ railway up --service @openchannel/web --environment production --detach
 #### Notes
 
 - Attach persistent volume(s) to API/worker if you depend on local media files (`STORAGE_ROOT=/data/storage`). In IPFS-only mode this mainly covers transient processing/HLS output.
-- Keep worker replica count at `1` unless you add explicit leader election/queue partitioning.
+- Worker replicas use Redis lease locking when `REDIS_URL` is set; if Redis is unavailable they fall back to unlocked mode.
 
 ### Single service (legacy)
 

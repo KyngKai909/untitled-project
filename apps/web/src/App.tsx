@@ -25,7 +25,7 @@ export default function App() {
   }, [theme]);
 
   return (
-    <div className="appShell">
+    <div className="appRoot">
       <AppHeader
         theme={theme}
         onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}

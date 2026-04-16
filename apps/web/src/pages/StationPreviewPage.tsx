@@ -101,63 +101,93 @@ export default function StationPreviewPage() {
   );
 
   return (
-    <main className="page">
-      <section className="pageHero">
-        <div className="pageHero__meta">
-          <span className="microTag" data-tone="accent">Station Preview</span>
-          <span className="microTag">Read-only monitoring</span>
+    <main className="routeFrame">
+      <section className="pageBanner">
+        <div className="pageBanner__meta">
+          <span className="miniTag miniTag--accent">Station Preview</span>
+          {detail ? (
+            <span className={`statusPill ${detail.state.isRunning ? "statusPill--live" : "statusPill--off"}`}>
+              {detail.state.isRunning ? "Live" : "Off Air"}
+            </span>
+          ) : null}
         </div>
         <h1>{detail?.channel.name ?? "Loading station"}</h1>
-        <p>Monitor stream health and current playout state without entering manager controls.</p>
-        <div className="pageHero__actions">
-          <Link className="button" data-variant="secondary" to={channelId ? `/stations/${channelId}` : "/dashboard"}>
+        <p>Read-only monitoring layout with feed playback and operational metadata side rail.</p>
+        <div className="pageBanner__actions">
+          <Link className="uiButton uiButton--secondary" to={channelId ? `/stations/${channelId}` : "/dashboard"}>
             Back to Manager
+          </Link>
+          <Link className="uiButton uiButton--secondary" to="/dashboard">
+            Back to Workspace
           </Link>
         </div>
       </section>
 
-      {error ? (
-        <div className="alert" data-tone="error">
-          {error}
-        </div>
-      ) : null}
+      {error ? <div className="inlineAlert inlineAlert--error">{error}</div> : null}
 
-      <section className="section">
-        <header className="section__head">
-          <div>
-            <h2>Live Signal</h2>
-            <p>Playback source is automatically switched to Livepeer when enabled.</p>
-          </div>
-        </header>
-        <div className="section__body">
-          {loading || !detail ? (
-            <p className="loading">Loading stream...</p>
-          ) : (
-            <>
-              <div className="metaLine">
-                <span className="badge" data-tone={detail.state.isRunning ? "live" : "off"}>
-                  {detail.state.isRunning ? "Live" : "Off Air"}
-                </span>
-                {detail.state.currentAssetTitle ? <span>{detail.state.currentAssetTitle}</span> : null}
-                {detail.state.currentStartedAt ? <span>Started {formatDateTime(detail.state.currentStartedAt)}</span> : null}
+      <section className="previewGrid">
+        <section className="previewMain">
+          <header className="paneHead">
+            <div>
+              <h2>Live Feed</h2>
+              <p>Primary playback channel selected from current output route.</p>
+            </div>
+          </header>
+          <div className="paneBody">
+            {loading || !detail ? (
+              <p className="loadingState">Loading stream...</p>
+            ) : livepeerEmbedUrl ? (
+              <div className="mediaShell">
+                <iframe
+                  src={livepeerEmbedUrl}
+                  title="Livepeer Player"
+                  allow="autoplay; fullscreen; picture-in-picture"
+                />
               </div>
+            ) : streamUrl ? (
+              <HlsPlayer src={streamUrl} muted={false} />
+            ) : (
+              <p className="emptyState">No stream URL available yet.</p>
+            )}
+          </div>
+        </section>
 
-              {livepeerEmbedUrl ? (
-                <div className="mediaFrame">
-                  <iframe
-                    src={livepeerEmbedUrl}
-                    title="Livepeer Player"
-                    allow="autoplay; fullscreen; picture-in-picture"
-                  />
-                </div>
-              ) : streamUrl ? (
-                <HlsPlayer src={streamUrl} muted={false} />
-              ) : (
-                <p className="empty">No stream URL available yet.</p>
-              )}
-            </>
-          )}
-        </div>
+        <aside className="previewRail">
+          <header className="paneHead">
+            <div>
+              <h2>Signal State</h2>
+              <p>Current track and recent playback timing.</p>
+            </div>
+          </header>
+          <div className="paneBody">
+            {loading || !detail ? (
+              <p className="loadingState">Collecting status...</p>
+            ) : (
+              <>
+                <p className="metaLine">
+                  <span className={`statusPill ${detail.state.isRunning ? "statusPill--live" : "statusPill--off"}`}>
+                    {detail.state.isRunning ? "Live" : "Off Air"}
+                  </span>
+                  {detail.state.currentAssetTitle ? <span>{detail.state.currentAssetTitle}</span> : null}
+                </p>
+
+                <section className="stageSection">
+                  <div className="stageSection__head">
+                    <div>
+                      <h3>Playback Details</h3>
+                      <p>Updated every 8 seconds.</p>
+                    </div>
+                  </div>
+                  <div className="stageSection__body">
+                    <p className="metaLine">Started {formatDateTime(detail.state.currentStartedAt)}</p>
+                    <p className="metaLine">Queue Index {detail.state.queueIndex}</p>
+                    <p className="metaLine">Livepeer {detail.livepeer?.enabled ? "Enabled" : "Disabled"}</p>
+                  </div>
+                </section>
+              </>
+            )}
+          </div>
+        </aside>
       </section>
     </main>
   );

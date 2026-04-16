@@ -80,15 +80,11 @@ export default function HlsPlayer({ src, autoPlay = true, muted = true }: HlsPla
   }, [autoPlay, muted, src]);
 
   return (
-    <div className="stack">
-      <div className="mediaFrame">
+    <div className="fieldGrid">
+      <div className="mediaShell">
         <video ref={videoRef} playsInline controls />
       </div>
-      {error ? (
-        <div className="alert" data-tone="error">
-          {error}
-        </div>
-      ) : null}
+      {error ? <div className="inlineAlert inlineAlert--error">{error}</div> : null}
     </div>
   );
 }

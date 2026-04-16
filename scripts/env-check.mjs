@@ -73,6 +73,12 @@ const checks = [
       : "Optional locally; when unset, JSON file storage is used."
   },
   {
+    key: "REDIS_URL",
+    scope: "root",
+    required: false,
+    note: "Optional but recommended on Railway for worker leader lock in multi-replica deployments."
+  },
+  {
     key: "WEB_ORIGIN",
     scope: "root",
     required: false,

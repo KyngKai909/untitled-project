@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { createChannel, getChannelStatus, listChannels, listLibraryAssets, uploadLibraryAsset } from "../api";
+import OverlayPanel from "../components/OverlayPanel";
 import type { Asset, AssetInsertionCategory, ChannelSummary, PlayoutState, StreamMode } from "../types";
 import { disconnectWallet, formatWalletAddress, getStoredWalletAddress } from "../wallet";
 
@@ -58,6 +59,11 @@ export default function CreatorDashboardPage() {
   const [libraryUploadPercent, setLibraryUploadPercent] = useState(0);
   const [libraryUploadLoadedBytes, setLibraryUploadLoadedBytes] = useState(0);
   const [libraryUploadTotalBytes, setLibraryUploadTotalBytes] = useState(0);
+
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
+  const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
 
   if (!wallet) {
     return <Navigate to="/" replace />;
@@ -152,10 +158,13 @@ export default function CreatorDashboardPage() {
         streamMode,
         brandColor: streamMode === "radio" ? "#f59e0b" : "#0ea5e9"
       });
+
       setName("");
       setDescription("");
       setStreamMode("video");
+      setCreateModalOpen(false);
       setInfo("Station created. Opening manager...");
+
       await refreshStations();
       navigate(`/stations/${response.channel.id}`);
     } catch (err) {
@@ -197,6 +206,8 @@ export default function CreatorDashboardPage() {
       setLibraryFile(null);
       setLibraryTitle("");
       setLibraryKind("program");
+      setUploadModalOpen(false);
+
       setInfo(
         [
           "Library upload complete.",
@@ -206,6 +217,7 @@ export default function CreatorDashboardPage() {
           .filter(Boolean)
           .join(" ")
       );
+
       await refreshLibrary();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to upload to library");
@@ -216,317 +228,401 @@ export default function CreatorDashboardPage() {
     }
   }
 
-  return (
-    <main className="page">
-      <section className="pageHero">
-        <div className="pageHero__meta">
-          <span className="microTag" data-tone="accent">
-            Creator Dashboard
-          </span>
-          <span className="microTag">Wallet {formatWalletAddress(ownerWallet)}</span>
+  const leftRail = (
+    <>
+      <header className="paneHead">
+        <div>
+          <h3>Workspace Navigation</h3>
+          <p>Switch operating context.</p>
         </div>
-        <h1>Operate stations with strict control over media, runtime, and output.</h1>
-        <p>
-          Build your global asset library once, compose channel playlists with deterministic ordering, and run live output
-          from a single surface.
-        </p>
-        <div className="pageHero__actions">
-          <button className="button" type="button" onClick={() => setSection("stations")}>Stations</button>
-          <button className="button" data-variant="secondary" type="button" onClick={() => setSection("library")}>
+      </header>
+      <div className="paneBody paneBody--dense">
+        <div className="navStack">
+          <button
+            type="button"
+            data-active={section === "stations"}
+            onClick={() => {
+              setSection("stations");
+              setLeftDrawerOpen(false);
+            }}
+          >
+            Stations
+          </button>
+          <button
+            type="button"
+            data-active={section === "library"}
+            onClick={() => {
+              setSection("library");
+              setLeftDrawerOpen(false);
+            }}
+          >
             Library
           </button>
-          <button className="button" data-variant="secondary" type="button" onClick={() => setSection("account")}>
+          <button
+            type="button"
+            data-active={section === "account"}
+            onClick={() => {
+              setSection("account");
+              setLeftDrawerOpen(false);
+            }}
+          >
             Account
           </button>
         </div>
-      </section>
 
-      {error ? (
-        <div className="alert" data-tone="error">
-          {error}
+        <div className="stageSection">
+          <div className="stageSection__head">
+            <div>
+              <h3>Quick Actions</h3>
+              <p>Primary creator operations.</p>
+            </div>
+          </div>
+          <div className="stageSection__body">
+            <button
+              className="uiButton uiButton--accent"
+              type="button"
+              onClick={() => {
+                setCreateModalOpen(true);
+                setLeftDrawerOpen(false);
+              }}
+            >
+              Create Station
+            </button>
+            <button
+              className="uiButton uiButton--secondary"
+              type="button"
+              onClick={() => {
+                setUploadModalOpen(true);
+                setLeftDrawerOpen(false);
+              }}
+            >
+              Upload Asset
+            </button>
+            <button className="uiButton uiButton--secondary" type="button" onClick={() => void refreshStations()} disabled={loadingStations}>
+              {loadingStations ? "Refreshing" : "Refresh Stations"}
+            </button>
+          </div>
         </div>
-      ) : null}
-      {info ? (
-        <div className="alert" data-tone="info">
-          {info}
-        </div>
-      ) : null}
-
-      <div className="toolbar" role="tablist" aria-label="Dashboard Sections">
-        <button type="button" data-active={section === "stations"} onClick={() => setSection("stations")}>Stations</button>
-        <button type="button" data-active={section === "library"} onClick={() => setSection("library")}>Library</button>
-        <button type="button" data-active={section === "account"} onClick={() => setSection("account")}>Account</button>
       </div>
+    </>
+  );
 
-      <section className="statsRail" aria-label="Creator Snapshot">
-        <article className="statCell">
-          <p className="statCell__label">Stations</p>
-          <p className="statCell__value">{snapshot.stations}</p>
-        </article>
-        <article className="statCell">
-          <p className="statCell__label">Live</p>
-          <p className="statCell__value">{snapshot.live}</p>
-        </article>
-        <article className="statCell">
-          <p className="statCell__label">Programs</p>
-          <p className="statCell__value">{snapshot.libraryPrograms}</p>
-        </article>
-        <article className="statCell">
-          <p className="statCell__label">Ads and Sponsor Units</p>
-          <p className="statCell__value">{snapshot.libraryAds}</p>
-        </article>
+  const rightRail = (
+    <>
+      <header className="paneHead">
+        <div>
+          <h3>Account Snapshot</h3>
+          <p>Wallet scoped totals and shortcuts.</p>
+        </div>
+      </header>
+      <div className="paneBody">
+        <section className="kpiRail">
+          <article>
+            <h4>Stations</h4>
+            <p>{snapshot.stations}</p>
+          </article>
+          <article>
+            <h4>Live</h4>
+            <p>{snapshot.live}</p>
+          </article>
+          <article>
+            <h4>Programs</h4>
+            <p>{snapshot.libraryPrograms}</p>
+          </article>
+          <article>
+            <h4>Ads / Sponsors</h4>
+            <p>{snapshot.libraryAds}</p>
+          </article>
+        </section>
+
+        <section className="stageSection">
+          <div className="stageSection__head">
+            <div>
+              <h3>Identity</h3>
+              <p>Current wallet session.</p>
+            </div>
+          </div>
+          <div className="stageSection__body">
+            <p className="metaLine">
+              <span className="statusPill statusPill--live">Connected</span>
+              <span>{formatWalletAddress(ownerWallet)}</span>
+            </p>
+            <button className="uiButton uiButton--danger" type="button" onClick={onDisconnectWallet}>
+              Disconnect Wallet
+            </button>
+          </div>
+        </section>
+      </div>
+    </>
+  );
+
+  return (
+    <main className="routeFrame">
+      <section className="pageBanner">
+        <div className="pageBanner__meta">
+          <span className="miniTag miniTag--accent">Creator Workspace</span>
+          <span className="miniTag">Wallet {formatWalletAddress(ownerWallet)}</span>
+        </div>
+        <h1>Command center for media operations, station control, and live readiness.</h1>
+        <p>
+          Multi-pane interface with modal workflows for creation and upload, optimized for daily operation across desktop and mobile.
+        </p>
+        <div className="pageBanner__actions">
+          <button className="uiButton uiButton--accent" type="button" onClick={() => setCreateModalOpen(true)}>
+            New Station
+          </button>
+          <button className="uiButton uiButton--secondary" type="button" onClick={() => setUploadModalOpen(true)}>
+            Upload Media
+          </button>
+          <button className="uiButton uiButton--ghost mobileOnly" type="button" onClick={() => setLeftDrawerOpen(true)}>
+            Open Navigation
+          </button>
+          <button className="uiButton uiButton--ghost mobileOnly" type="button" onClick={() => setRightDrawerOpen(true)}>
+            Open Snapshot
+          </button>
+        </div>
       </section>
 
-      {section === "library" ? (
-        <div className="grid2">
-          <section className="section">
-            <header className="section__head">
-              <div>
-                <h2>Upload to Global Library</h2>
-                <p>Assets uploaded here are reusable across all stations owned by this wallet.</p>
+      {error ? <div className="inlineAlert inlineAlert--error">{error}</div> : null}
+      {info ? <div className="inlineAlert inlineAlert--info">{info}</div> : null}
+
+      <section className="workspaceGrid">
+        <aside className="workspacePane workspacePane--rail">{leftRail}</aside>
+
+        <section className="workspacePane">
+          {section === "stations" ? (
+            <>
+              <header className="paneHead">
+                <div>
+                  <h2>Station Roster</h2>
+                  <p>Live stations are pinned first, then sorted by creation date.</p>
+                </div>
+                <button className="uiButton uiButton--secondary" type="button" onClick={() => void refreshStations()} disabled={loadingStations}>
+                  {loadingStations ? "Refreshing" : "Refresh"}
+                </button>
+              </header>
+              <div className="paneBody">
+                {loadingStations ? <p className="loadingState">Loading stations...</p> : null}
+                {!loadingStations && stations.length === 0 ? (
+                  <p className="emptyState">No stations yet. Create your first station.</p>
+                ) : null}
+
+                {stations.length > 0 ? (
+                  <div className="dataTable">
+                    {stations.map((station) => (
+                      <article className="dataRow" key={station.summary.channel.id}>
+                        <div>
+                          <p className="dataRow__title">{station.summary.channel.name}</p>
+                          <p className="dataRow__meta">
+                            {station.summary.channel.description || "No description"} · {station.summary.playlistCount} queued
+                          </p>
+                        </div>
+                        <div className="dataRow__actions">
+                          <span className={`statusPill ${station.state?.isRunning ? "statusPill--live" : "statusPill--off"}`}>
+                            {station.state?.isRunning ? "Live" : "Off Air"}
+                          </span>
+                          <Link className="uiButton uiButton--secondary" to={`/stations/${station.summary.channel.id}`}>
+                            Manage
+                          </Link>
+                          <Link className="uiButton uiButton--secondary" to={`/stations/${station.summary.channel.id}/preview`}>
+                            Preview
+                          </Link>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
               </div>
-            </header>
-            <div className="section__body">
-              <form className="stack" onSubmit={(event) => void onUploadLibraryAsset(event)}>
-                <label className="field">
-                  <span>Media File</span>
-                  <input
-                    type="file"
-                    required
-                    onChange={(event) => setLibraryFile(event.target.files?.[0] ?? null)}
-                    disabled={uploadingLibrary}
-                  />
-                </label>
+            </>
+          ) : null}
 
-                <label className="field">
-                  <span>Optional Title</span>
-                  <input
-                    value={libraryTitle}
-                    onChange={(event) => setLibraryTitle(event.target.value)}
-                    disabled={uploadingLibrary}
-                    placeholder="Override detected title"
-                  />
-                </label>
-
-                <label className="field">
-                  <span>Insertion Category</span>
-                  <select
-                    value={libraryKind}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      if (value === "ad" || value === "sponsor" || value === "bumper") {
-                        setLibraryKind(value);
-                        return;
-                      }
-                      setLibraryKind("program");
-                    }}
-                    disabled={uploadingLibrary}
-                  >
-                    <option value="program">Program</option>
-                    <option value="ad">Ad</option>
-                    <option value="sponsor">Sponsor Segment</option>
-                    <option value="bumper">Bumper</option>
-                  </select>
-                </label>
-
-                <div className="pageHero__actions">
-                  <button className="button" data-variant="accent" type="submit" disabled={uploadingLibrary || !libraryFile}>
-                    {uploadingLibrary ? "Uploading" : "Upload to Library"}
+          {section === "library" ? (
+            <>
+              <header className="paneHead">
+                <div>
+                  <h2>Global Library</h2>
+                  <p>Wallet-level assets available for station import.</p>
+                </div>
+                <div className="pageBanner__actions">
+                  <button className="uiButton uiButton--accent" type="button" onClick={() => setUploadModalOpen(true)}>
+                    Upload
                   </button>
-                  <button
-                    className="button"
-                    data-variant="secondary"
-                    type="button"
-                    onClick={() => void refreshLibrary()}
-                    disabled={loadingLibrary}
-                  >
+                  <button className="uiButton uiButton--secondary" type="button" onClick={() => void refreshLibrary()} disabled={loadingLibrary}>
                     {loadingLibrary ? "Refreshing" : "Refresh"}
                   </button>
                 </div>
-              </form>
+              </header>
+              <div className="paneBody">
+                {libraryAssets.length === 0 ? <p className="emptyState">No global library assets yet.</p> : null}
 
-              {uploadingLibrary ? (
-                <div className="stack">
-                  <p className="metaLine">
-                    <span>{libraryUploadPercent < 100 ? "Uploading file" : "Processing and compressing"}</span>
-                    <span>{libraryUploadPercent}%</span>
-                  </p>
-                  <div className="progressTrack">
-                    <span style={{ width: `${libraryUploadPercent}%` }} />
+                {libraryAssets.length > 0 ? (
+                  <div className="dataTable">
+                    {libraryAssets.map((asset) => (
+                      <article className="dataRow" key={asset.id}>
+                        <div>
+                          <p className="dataRow__title">{asset.title}</p>
+                          <p className="dataRow__meta">
+                            {asset.insertionCategory ?? asset.type} · {formatDateTime(asset.createdAt)}
+                          </p>
+                        </div>
+                        <div className="dataRow__actions">
+                          <span className="miniTag">{asset.mediaKind}</span>
+                          {asset.ipfsUrl ? (
+                            <a className="uiButton uiButton--secondary" href={asset.ipfsUrl} target="_blank" rel="noreferrer">
+                              IPFS
+                            </a>
+                          ) : null}
+                        </div>
+                      </article>
+                    ))}
                   </div>
-                  {libraryUploadTotalBytes > 0 ? (
-                    <p className="empty">
-                      {Math.round(libraryUploadLoadedBytes / (1024 * 1024))}MB / {Math.round(libraryUploadTotalBytes / (1024 * 1024))}
-                      MB
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          </section>
-
-          <section className="section">
-            <header className="section__head">
-              <div>
-                <h2>Current Library Assets</h2>
-                <p>Chronological record of media available to this creator account.</p>
+                ) : null}
               </div>
-            </header>
-            <div className="section__body">
-              {libraryAssets.length === 0 ? <p className="empty">No global library assets yet.</p> : null}
-              {libraryAssets.length > 0 ? (
-                <div className="list">
-                  {libraryAssets.map((asset) => (
-                    <article key={asset.id} className="row">
-                      <div>
-                        <p className="row__title">{asset.title}</p>
-                        <p className="row__meta">
-                          {asset.insertionCategory ?? asset.type} · {formatDateTime(asset.createdAt)}
-                        </p>
-                      </div>
-                      <div className="row__actions">
-                        <span className="badge">{asset.mediaKind}</span>
-                        {asset.ipfsUrl ? (
-                          <a className="button" data-variant="secondary" href={asset.ipfsUrl} target="_blank" rel="noreferrer">
-                            IPFS
-                          </a>
-                        ) : null}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          </section>
-        </div>
-      ) : null}
+            </>
+          ) : null}
 
-      {section === "stations" ? (
-        <div className="grid2">
-          <section className="section">
-            <header className="section__head">
-              <div>
-                <h2>Create Station</h2>
-                <p>Define station profile and stream mode. Brand color is derived automatically.</p>
+          {section === "account" ? (
+            <>
+              <header className="paneHead">
+                <div>
+                  <h2>Account Controls</h2>
+                  <p>Session settings and identity details.</p>
+                </div>
+              </header>
+              <div className="paneBody">
+                <section className="stageSection">
+                  <div className="stageSection__head">
+                    <div>
+                      <h3>Connected Wallet</h3>
+                      <p>Primary creator identity for this workspace.</p>
+                    </div>
+                  </div>
+                  <div className="stageSection__body">
+                    <p className="metaLine">{formatWalletAddress(ownerWallet)}</p>
+                    <button className="uiButton uiButton--danger" type="button" onClick={onDisconnectWallet}>
+                      Disconnect Wallet
+                    </button>
+                  </div>
+                </section>
               </div>
-            </header>
-            <div className="section__body">
-              <form className="stack" onSubmit={(event) => void onCreateStation(event)}>
-                <label className="field">
-                  <span>Station Name</span>
-                  <input
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    placeholder="Station name"
-                    required
-                    disabled={creating}
-                  />
-                </label>
-
-                <label className="field">
-                  <span>Description</span>
-                  <textarea
-                    value={description}
-                    onChange={(event) => setDescription(event.target.value)}
-                    placeholder="What this station is for"
-                    disabled={creating}
-                  />
-                </label>
-
-                <label className="field">
-                  <span>Stream Mode</span>
-                  <select
-                    value={streamMode}
-                    onChange={(event) => setStreamMode(event.target.value === "radio" ? "radio" : "video")}
-                    disabled={creating}
-                  >
-                    <option value="video">Video</option>
-                    <option value="radio">Radio</option>
-                  </select>
-                </label>
-
-                <div className="pageHero__actions">
-                  <button className="button" data-variant="accent" type="submit" disabled={!name.trim() || creating}>
-                    {creating ? "Creating" : "Create Station"}
-                  </button>
-                  <button
-                    className="button"
-                    data-variant="secondary"
-                    type="button"
-                    disabled={loadingStations}
-                    onClick={() => void refreshStations()}
-                  >
-                    {loadingStations ? "Refreshing" : "Refresh Stations"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </section>
-
-          <section className="section">
-            <header className="section__head">
-              <div>
-                <h2>Station Roster</h2>
-                <p>Live stations are pinned to the top by runtime status.</p>
-              </div>
-            </header>
-            <div className="section__body">
-              {loadingStations ? <p className="loading">Loading stations...</p> : null}
-              {!loadingStations && stations.length === 0 ? (
-                <p className="empty">No stations yet. Create your first station in the panel on the left.</p>
-              ) : null}
-
-              {stations.length > 0 ? (
-                <div className="list">
-                  {stations.map((station) => (
-                    <article key={station.summary.channel.id} className="row">
-                      <div>
-                        <p className="row__title">{station.summary.channel.name}</p>
-                        <p className="row__meta">
-                          {station.summary.channel.description || "No description"} · {station.summary.playlistCount} queued
-                        </p>
-                      </div>
-                      <div className="row__actions">
-                        <span className="badge" data-tone={station.state?.isRunning ? "live" : "off"}>
-                          {station.state?.isRunning ? "Live" : "Off Air"}
-                        </span>
-                        <Link className="button" data-variant="secondary" to={`/stations/${station.summary.channel.id}`}>
-                          Manage
-                        </Link>
-                        <Link className="button" data-variant="secondary" to={`/stations/${station.summary.channel.id}/preview`}>
-                          Preview
-                        </Link>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          </section>
-        </div>
-      ) : null}
-
-      {section === "account" ? (
-        <section className="section">
-          <header className="section__head">
-            <div>
-              <h2>Account and Session</h2>
-              <p>Wallet-scoped access control for creator operations.</p>
-            </div>
-          </header>
-          <div className="section__body">
-            <p className="metaLine">
-              <span className="badge">Connected Wallet</span>
-              <span>{formatWalletAddress(ownerWallet)}</span>
-            </p>
-            <div className="pageHero__actions">
-              <button className="button" data-variant="danger" onClick={onDisconnectWallet}>
-                Disconnect Wallet
-              </button>
-            </div>
-          </div>
+            </>
+          ) : null}
         </section>
-      ) : null}
+
+        <aside className="workspacePane workspacePane--rail">{rightRail}</aside>
+      </section>
+
+      <OverlayPanel open={createModalOpen} onClose={() => setCreateModalOpen(false)} title="Create Station" mode="center">
+        <form className="fieldGrid" onSubmit={(event) => void onCreateStation(event)}>
+          <label className="field">
+            <span>Station Name</span>
+            <input className="uiInput" value={name} onChange={(event) => setName(event.target.value)} required disabled={creating} />
+          </label>
+          <label className="field">
+            <span>Description</span>
+            <textarea className="uiTextarea" value={description} onChange={(event) => setDescription(event.target.value)} disabled={creating} />
+          </label>
+          <label className="field">
+            <span>Stream Mode</span>
+            <select
+              className="uiSelect"
+              value={streamMode}
+              onChange={(event) => setStreamMode(event.target.value === "radio" ? "radio" : "video")}
+              disabled={creating}
+            >
+              <option value="video">Video</option>
+              <option value="radio">Radio</option>
+            </select>
+          </label>
+          <div className="pageBanner__actions">
+            <button className="uiButton uiButton--accent" type="submit" disabled={creating || !name.trim()}>
+              {creating ? "Creating" : "Create Station"}
+            </button>
+            <button className="uiButton uiButton--secondary" type="button" onClick={() => setCreateModalOpen(false)}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      </OverlayPanel>
+
+      <OverlayPanel open={uploadModalOpen} onClose={() => setUploadModalOpen(false)} title="Upload Library Asset" mode="center">
+        <form className="fieldGrid" onSubmit={(event) => void onUploadLibraryAsset(event)}>
+          <label className="field">
+            <span>Media File</span>
+            <input
+              className="uiFile"
+              type="file"
+              required
+              onChange={(event) => setLibraryFile(event.target.files?.[0] ?? null)}
+              disabled={uploadingLibrary}
+            />
+          </label>
+          <label className="field">
+            <span>Optional Title</span>
+            <input
+              className="uiInput"
+              value={libraryTitle}
+              onChange={(event) => setLibraryTitle(event.target.value)}
+              disabled={uploadingLibrary}
+            />
+          </label>
+          <label className="field">
+            <span>Insertion Category</span>
+            <select
+              className="uiSelect"
+              value={libraryKind}
+              onChange={(event) => {
+                const value = event.target.value;
+                if (value === "ad" || value === "sponsor" || value === "bumper") {
+                  setLibraryKind(value);
+                  return;
+                }
+                setLibraryKind("program");
+              }}
+              disabled={uploadingLibrary}
+            >
+              <option value="program">Program</option>
+              <option value="ad">Ad</option>
+              <option value="sponsor">Sponsor Segment</option>
+              <option value="bumper">Bumper</option>
+            </select>
+          </label>
+
+          {uploadingLibrary ? (
+            <>
+              <p className="metaLine">
+                <span>{libraryUploadPercent < 100 ? "Uploading file" : "Processing and compressing"}</span>
+                <span>{libraryUploadPercent}%</span>
+              </p>
+              <div className="progressBar">
+                <span style={{ width: `${libraryUploadPercent}%` }} />
+              </div>
+              {libraryUploadTotalBytes > 0 ? (
+                <p className="emptyState">
+                  {Math.round(libraryUploadLoadedBytes / (1024 * 1024))}MB / {Math.round(libraryUploadTotalBytes / (1024 * 1024))}MB
+                </p>
+              ) : null}
+            </>
+          ) : null}
+
+          <div className="pageBanner__actions">
+            <button className="uiButton uiButton--accent" type="submit" disabled={uploadingLibrary || !libraryFile}>
+              {uploadingLibrary ? "Uploading" : "Upload"}
+            </button>
+            <button className="uiButton uiButton--secondary" type="button" onClick={() => setUploadModalOpen(false)}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      </OverlayPanel>
+
+      <OverlayPanel open={leftDrawerOpen} onClose={() => setLeftDrawerOpen(false)} title="Workspace Navigation" mode="left">
+        {leftRail}
+      </OverlayPanel>
+
+      <OverlayPanel open={rightDrawerOpen} onClose={() => setRightDrawerOpen(false)} title="Account Snapshot" mode="right">
+        {rightRail}
+      </OverlayPanel>
     </main>
   );
 }

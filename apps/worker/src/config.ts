@@ -15,6 +15,9 @@ export const UPLOAD_ROOT = path.join(STORAGE_ROOT, "uploads");
 export const DB_PATH = path.join(STORAGE_ROOT, "db.json");
 export const DB_LOCK_PATH = path.join(STORAGE_ROOT, "db.lock");
 export const POLL_INTERVAL_MS = Number(process.env.WORKER_POLL_INTERVAL_MS ?? 1000);
+export const REDIS_URL = process.env.REDIS_URL?.trim() ?? "";
+export const REDIS_WORKER_LEADER_KEY = process.env.REDIS_WORKER_LEADER_KEY?.trim() || "opencast:worker:leader";
+export const REDIS_WORKER_LEASE_SEC = parsePositiveIntEnv(process.env.REDIS_WORKER_LEASE_SEC, 15);
 
 function loadEnvFile(envPath: string): void {
   if (!fs.existsSync(envPath)) {
@@ -67,4 +70,12 @@ function normalizeBaseUrl(value: string | undefined): string | undefined {
     return undefined;
   }
   return trimmed.replace(/\/+$/, "");
+}
+
+function parsePositiveIntEnv(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return Math.floor(parsed);
 }

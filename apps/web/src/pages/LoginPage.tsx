@@ -29,97 +29,89 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="page">
-      <section className="pageHero">
-        <div className="pageHero__meta">
-          <span className="microTag" data-tone="accent">
-            Creator Access
-          </span>
-          <span className="microTag">Wallet-gated dashboard</span>
+    <main className="routeFrame">
+      <section className="pageBanner">
+        <div className="pageBanner__meta">
+          <span className="miniTag miniTag--accent">Creator Access</span>
+          <span className="miniTag">Wallet-gated auth</span>
         </div>
-        <h1>Run your channel operations from one control surface.</h1>
+        <h1>OpenCast runs as an operator workspace, not a prototype dashboard.</h1>
         <p>
-          Connect your wallet to manage global media library, station orchestration, runtime schedules, and live playout.
-          The interface is designed for daily operations, not demos.
+          Authenticate with your wallet to open the production workspace for station management, runtime orchestration,
+          and live output control.
         </p>
-        <div className="pageHero__actions">
-          <button className="button" type="button" onClick={() => void onConnectWallet()} disabled={connecting || Boolean(wallet)}>
-            {connecting ? "Connecting" : wallet ? "Wallet Connected" : "Connect Wallet"}
+        <div className="pageBanner__actions">
+          <button className="uiButton uiButton--accent" type="button" onClick={() => void onConnectWallet()} disabled={connecting || Boolean(wallet)}>
+            {connecting ? "Connecting" : wallet ? "Connected" : "Connect Wallet"}
           </button>
-          <button className="button" data-variant="secondary" type="button" onClick={() => navigate("/dashboard")}>
-            Open Dashboard
+          <button className="uiButton uiButton--secondary" type="button" onClick={() => navigate("/dashboard")}>
+            Enter Workspace
           </button>
         </div>
       </section>
 
-      {error ? (
-        <div className="alert" data-tone="error">
-          {error}
-        </div>
-      ) : null}
+      {error ? <div className="inlineAlert inlineAlert--error">{error}</div> : null}
 
-      <div className="grid2">
-        <section className="section">
-          <header className="section__head">
+      <div className="previewGrid">
+        <section className="previewMain">
+          <header className="paneHead">
             <div>
-              <h2>Access State</h2>
-              <p>Session is tied to your wallet address. Disconnect at any time.</p>
+              <h2>Operational Loop</h2>
+              <p>From media ingestion to live playout, this flow is optimized for repeatable daily use.</p>
             </div>
           </header>
-          <div className="section__body">
+          <div className="paneBody">
+            <div className="dataTable">
+              <article className="dataRow">
+                <div>
+                  <p className="dataRow__title">1. Library ingestion</p>
+                  <p className="dataRow__meta">Upload once to wallet scope and reuse assets across stations.</p>
+                </div>
+              </article>
+              <article className="dataRow">
+                <div>
+                  <p className="dataRow__title">2. Station composition</p>
+                  <p className="dataRow__meta">Assemble queues, import sponsor units, and define insertion cadence.</p>
+                </div>
+              </article>
+              <article className="dataRow">
+                <div>
+                  <p className="dataRow__title">3. Runtime control</p>
+                  <p className="dataRow__meta">Schedule windows, route output, and monitor now/next timeline.</p>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <aside className="previewRail">
+          <header className="paneHead">
+            <div>
+              <h2>Session Status</h2>
+              <p>Current wallet authorization state.</p>
+            </div>
+          </header>
+          <div className="paneBody">
             {wallet ? (
               <>
                 <p className="metaLine">
-                  <span className="badge" data-tone="live">
-                    Authorized
-                  </span>
+                  <span className="statusPill statusPill--live">Authorized</span>
                   <span>{formatWalletAddress(wallet)}</span>
                 </p>
-                <div className="pageHero__actions">
-                  <button className="button" data-variant="accent" type="button" onClick={() => navigate("/dashboard")}>
-                    Continue to Dashboard
+                <div className="pageBanner__actions">
+                  <button className="uiButton uiButton--accent" type="button" onClick={() => navigate("/dashboard")}>
+                    Continue
                   </button>
-                  <button className="button" data-variant="danger" type="button" onClick={onDisconnectWallet}>
+                  <button className="uiButton uiButton--danger" type="button" onClick={onDisconnectWallet}>
                     Disconnect
                   </button>
                 </div>
               </>
             ) : (
-              <p className="empty">No wallet connected. Use the primary action above to authenticate.</p>
+              <p className="emptyState">No wallet connected. Authenticate to unlock station controls.</p>
             )}
           </div>
-        </section>
-
-        <section className="section">
-          <header className="section__head">
-            <div>
-              <h2>Operating Flow</h2>
-              <p>Core production workflow for creators and ops teams.</p>
-            </div>
-          </header>
-          <div className="section__body">
-            <div className="list">
-              <div className="row">
-                <div>
-                  <p className="row__title">1. Build global media library</p>
-                  <p className="row__meta">Upload once and reuse across multiple stations.</p>
-                </div>
-              </div>
-              <div className="row">
-                <div>
-                  <p className="row__title">2. Configure stations</p>
-                  <p className="row__meta">Set stream mode, queue logic, ad injection rules, and branding metadata.</p>
-                </div>
-              </div>
-              <div className="row">
-                <div>
-                  <p className="row__title">3. Control runtime and live state</p>
-                  <p className="row__meta">Schedule windows, go live instantly, and monitor now/next timeline.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        </aside>
       </div>
     </main>
   );

@@ -12,6 +12,7 @@ import type {
 import { HLS_ROOT, MEDIA_BASE_URL, POLL_INTERVAL_MS, UPLOAD_ROOT } from "./config.js";
 import { getChannel, getOrCreatePlayoutState, readDb, transaction } from "./db.js";
 import { resetChannelOutput, startHlsSegmenter, type FfmpegSession } from "./ffmpeg.js";
+import { closeRedis, refreshLeadershipLease, releaseLeadershipLease } from "./redis.js";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -420,6 +421,8 @@ class ChannelRuntime {
 }
 
 const runtimes = new Map<string, ChannelRuntime>();
+const workerInstanceId = `${process.env.RAILWAY_REPLICA_ID ?? process.pid}-${randomUUID()}`;
+let isLeader = false;
 
 function runtimeFor(channelId: string): ChannelRuntime {
   const existing = runtimes.get(channelId);
@@ -430,6 +433,30 @@ function runtimeFor(channelId: string): ChannelRuntime {
   const runtime = new ChannelRuntime(channelId);
   runtimes.set(channelId, runtime);
   return runtime;
+}
+
+async function stopAllRuntimes(reason: string) {
+  const activeRuntimes = [...runtimes.values()];
+  if (activeRuntimes.length === 0) {
+    return;
+  }
+
+  for (const runtime of activeRuntimes) {
+    runtime.stop();
+  }
+  await Promise.all(activeRuntimes.map((runtime) => runtime.waitForStop()));
+  runtimes.clear();
+  console.log(`[worker] ${reason}; stopped ${activeRuntimes.length} active runtime(s).`);
+}
+
+async function transitionToFollower(reason: string) {
+  if (!isLeader) {
+    return;
+  }
+
+  isLeader = false;
+  console.log(`[worker] leadership released: ${reason}`);
+  await stopAllRuntimes("leadership change");
 }
 
 async function applyCommand(command: PlayoutCommand) {
@@ -498,6 +525,17 @@ async function poll() {
   pollInFlight = true;
 
   try {
+    const hasLeadership = await refreshLeadershipLease(workerInstanceId);
+    if (!hasLeadership) {
+      await transitionToFollower("another worker holds the lease");
+      return;
+    }
+
+    if (!isLeader) {
+      isLeader = true;
+      console.log(`[worker] leadership acquired (${workerInstanceId})`);
+    }
+
     const { commands } = await transaction((db) => {
       const now = nowIso();
       const nowMs = Date.parse(now);
@@ -649,11 +687,9 @@ async function shutdown(signal: NodeJS.Signals) {
   clearInterval(pollInterval);
   console.log(`[worker] ${signal} received, stopping active channels...`);
 
-  const activeRuntimes = [...runtimes.values()];
-  for (const runtime of activeRuntimes) {
-    runtime.stop();
-  }
-  await Promise.all(activeRuntimes.map((runtime) => runtime.waitForStop()));
+  await stopAllRuntimes("shutdown");
+  await releaseLeadershipLease(workerInstanceId);
+  await closeRedis();
   process.exit(0);
 }
 
