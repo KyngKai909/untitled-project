@@ -76,6 +76,14 @@ function resolveStreamUrl(channelId: string, detail: ChannelDetail): string {
   return `${getApiBase()}${normalized || `/hls/${channelId}/index.m3u8`}`;
 }
 
+function toLivepeerEmbedUrl(playbackId: string | undefined): string | undefined {
+  const id = playbackId?.trim();
+  if (!id) {
+    return undefined;
+  }
+  return `https://lvpr.tv/?v=${encodeURIComponent(id)}`;
+}
+
 function mod(index: number, length: number): number {
   if (!length) {
     return 0;
@@ -236,6 +244,10 @@ export default function StationManagerPage() {
     }
     return resolveStreamUrl(channelId, detail);
   }, [channelId, detail]);
+  const livepeerEmbedUrl = useMemo(
+    () => toLivepeerEmbedUrl(detail?.livepeer?.enabled ? detail.livepeer.playbackId : undefined),
+    [detail]
+  );
 
   const stationPrograms = useMemo(() => {
     return detail ? detail.assets.filter((asset) => asset.type === "program") : [];
@@ -696,7 +708,18 @@ export default function StationManagerPage() {
                   <Button variant="outline" onClick={() => void onControl("skip")} disabled={busy}>Skip Next</Button>
                   <Button variant="outline" onClick={() => void onControl("stop")} disabled={busy}>Stop</Button>
                 </div>
-                {streamUrl ? <HlsPlayer src={streamUrl} muted /> : null}
+                {livepeerEmbedUrl ? (
+                  <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/60 p-2">
+                    <iframe
+                      src={livepeerEmbedUrl}
+                      title="Livepeer Player"
+                      allow="autoplay; fullscreen; picture-in-picture"
+                      className="aspect-video w-full rounded-md bg-black"
+                    />
+                  </div>
+                ) : streamUrl ? (
+                  <HlsPlayer src={streamUrl} muted />
+                ) : null}
               </CardContent>
             </Card>
           </div>

@@ -19,6 +19,14 @@ function resolveStreamUrl(channelId: string, detail: ChannelDetail): string {
   return `${getApiBase()}${normalized || `/hls/${channelId}/index.m3u8`}`;
 }
 
+function toLivepeerEmbedUrl(playbackId: string | undefined): string | undefined {
+  const id = playbackId?.trim();
+  if (!id) {
+    return undefined;
+  }
+  return `https://lvpr.tv/?v=${encodeURIComponent(id)}`;
+}
+
 function formatDateTime(iso: string | undefined): string {
   if (!iso) {
     return "--";
@@ -89,6 +97,10 @@ export default function StationPreviewPage() {
     }
     return resolveStreamUrl(channelId, detail);
   }, [channelId, detail]);
+  const livepeerEmbedUrl = useMemo(
+    () => toLivepeerEmbedUrl(detail?.livepeer?.enabled ? detail.livepeer.playbackId : undefined),
+    [detail]
+  );
 
   return (
     <main className="mx-auto w-full max-w-7xl space-y-4 px-4 py-6">
@@ -119,7 +131,16 @@ export default function StationPreviewPage() {
                 {detail.state.currentStartedAt ? <span>started {formatDateTime(detail.state.currentStartedAt)}</span> : null}
               </div>
 
-              {streamUrl ? (
+              {livepeerEmbedUrl ? (
+                <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/60 p-2">
+                  <iframe
+                    src={livepeerEmbedUrl}
+                    title="Livepeer Player"
+                    allow="autoplay; fullscreen; picture-in-picture"
+                    className="aspect-video w-full rounded-md bg-black"
+                  />
+                </div>
+              ) : streamUrl ? (
                 <HlsPlayer src={streamUrl} muted={false} />
               ) : (
                 <p className="text-sm text-slate-400">No stream URL available yet.</p>

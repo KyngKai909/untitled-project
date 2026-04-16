@@ -16,7 +16,7 @@ function ensureApiKey(): string {
 }
 
 function toPlaybackUrl(playbackId: string): string {
-  return `https://livepeercdn.studio/hls/${playbackId}/index.m3u8`;
+  return `https://playback.livepeer.studio/hls/${playbackId}/index.m3u8`;
 }
 
 function toIngestUrl(streamKey: string): string {

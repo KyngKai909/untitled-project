@@ -336,6 +336,18 @@ async function ensureLivepeerChannelConfig(channelId: string): Promise<LivepeerC
 
   const existing = getLivepeerConfigForChannel(db, channel.id);
   if (existing?.streamId && existing.streamKey && existing.playbackId && existing.ingestUrl) {
+    const canonicalPlaybackUrl = `https://playback.livepeer.studio/hls/${existing.playbackId}/index.m3u8`;
+    if (existing.playbackUrl !== canonicalPlaybackUrl) {
+      return transaction((editable) => {
+        const config = getLivepeerConfigForChannel(editable, channel.id);
+        if (!config) {
+          throw new Error("Livepeer config not found.");
+        }
+        config.playbackUrl = canonicalPlaybackUrl;
+        config.updatedAt = nowIso();
+        return config;
+      });
+    }
     return existing;
   }
 
