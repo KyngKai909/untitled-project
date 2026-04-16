@@ -9,6 +9,7 @@ loadEnvFile(path.join(workspaceRoot, ".env"));
 
 export const STORAGE_ROOT = resolveStorageRoot(process.env.STORAGE_ROOT);
 export const DATABASE_URL = process.env.DATABASE_URL?.trim() ?? "";
+export const MEDIA_BASE_URL = normalizeBaseUrl(process.env.MEDIA_BASE_URL);
 export const HLS_ROOT = path.join(STORAGE_ROOT, "hls");
 export const UPLOAD_ROOT = path.join(STORAGE_ROOT, "uploads");
 export const DB_PATH = path.join(STORAGE_ROOT, "db.json");
@@ -58,4 +59,12 @@ function resolveStorageRoot(configured: string | undefined): string {
 
   const value = configured.trim();
   return path.isAbsolute(value) ? value : path.resolve(workspaceRoot, value);
+}
+
+function normalizeBaseUrl(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  return trimmed.replace(/\/+$/, "");
 }

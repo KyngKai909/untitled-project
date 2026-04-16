@@ -145,7 +145,7 @@ railway variables --service @openchannel/web --environment production \
 #### Required runtime variables
 
 - `@openchannel/api`: `DATABASE_URL`, `STORAGE_ROOT=/data/storage`, `WEB_ORIGIN=<web-service-url>`, `LIVEPEER_API_KEY` (optional), `PINATA_JWT` (optional)
-- `@openchannel/worker`: `DATABASE_URL`, `STORAGE_ROOT=/data/storage`, `WORKER_POLL_INTERVAL_MS` (optional)
+- `@openchannel/worker`: `DATABASE_URL`, `STORAGE_ROOT=/data/storage`, `MEDIA_BASE_URL=<api-service-url>`, `WORKER_POLL_INTERVAL_MS` (optional)
 - `@openchannel/web`: `VITE_API_BASE=<api-service-url>`
 
 #### Domains

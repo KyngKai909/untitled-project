@@ -9,7 +9,7 @@ import type {
   PlayoutCommand,
   PlayoutState
 } from "@openchannel/shared";
-import { HLS_ROOT, POLL_INTERVAL_MS, UPLOAD_ROOT } from "./config.js";
+import { HLS_ROOT, MEDIA_BASE_URL, POLL_INTERVAL_MS, UPLOAD_ROOT } from "./config.js";
 import { getChannel, getOrCreatePlayoutState, readDb, transaction } from "./db.js";
 import { resetChannelOutput, startHlsSegmenter, type FfmpegSession } from "./ffmpeg.js";
 
@@ -142,9 +142,42 @@ function getLivepeerConfig(db: DatabaseSchema, channelId: string): LivepeerConfi
   return db.livepeerConfigs.find((entry) => entry.channelId === channelId);
 }
 
+function toUploadRelativePath(localPath: string): string | undefined {
+  const relative = path.relative(UPLOAD_ROOT, localPath);
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) {
+    return undefined;
+  }
+  return relative.split(path.sep).join("/");
+}
+
+function encodePathSegments(value: string): string {
+  return value
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+}
+
+function toMediaUploadUrl(relativeUploadPath: string): string | undefined {
+  if (!MEDIA_BASE_URL) {
+    return undefined;
+  }
+  return `${MEDIA_BASE_URL}/uploads/${encodePathSegments(relativeUploadPath)}`;
+}
+
+function resolveAssetInputPath(asset: Asset): string {
+  const relativeUploadPath = toUploadRelativePath(asset.localPath);
+  const remoteUrl = relativeUploadPath ? toMediaUploadUrl(relativeUploadPath) : undefined;
+  return remoteUrl ?? asset.localPath;
+}
+
 async function resolveRadioBackgroundPath(backgroundUrl: string | undefined): Promise<string | undefined> {
   if (!backgroundUrl) {
     return undefined;
+  }
+
+  if (/^https?:\/\//i.test(backgroundUrl)) {
+    return backgroundUrl;
   }
 
   const relative = backgroundUrl.startsWith("/uploads/")
@@ -152,6 +185,11 @@ async function resolveRadioBackgroundPath(backgroundUrl: string | undefined): Pr
     : backgroundUrl.replace(/^\/+/, "");
   if (!relative) {
     return undefined;
+  }
+
+  const remoteUrl = toMediaUploadUrl(relative);
+  if (remoteUrl) {
+    return remoteUrl;
   }
 
   const candidate = path.join(UPLOAD_ROOT, relative);
@@ -270,7 +308,8 @@ class ChannelRuntime {
 
       const radioBackgroundPath =
         channel.streamMode === "radio" ? await resolveRadioBackgroundPath(channel.radioBackgroundUrl) : undefined;
-      this.currentSession = await startHlsSegmenter(next.asset.localPath, outputDir, {
+      const assetInputPath = resolveAssetInputPath(next.asset);
+      this.currentSession = await startHlsSegmenter(assetInputPath, outputDir, {
         streamMode: channel.streamMode,
         assetMediaKind: next.asset.mediaKind,
         radioBackgroundPath,

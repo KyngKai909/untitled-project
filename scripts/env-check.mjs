@@ -95,6 +95,12 @@ const checks = [
     scope: "web",
     required: false,
     note: "Set to API URL for split-service deploys; leave blank for same-origin single-service deploys."
+  },
+  {
+    key: "MEDIA_BASE_URL",
+    scope: "root",
+    required: false,
+    note: "Set to API URL for split worker deployments so worker can fetch uploaded media over HTTP."
   }
 ];
 
