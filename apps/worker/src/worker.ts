@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import type {
   Asset,
   Channel,
@@ -32,6 +33,34 @@ interface NextAsset {
   programCompleted: boolean;
   playbackOffsetSec?: number;
   playbackDurationSec?: number;
+}
+
+function ensureProgramPlaylist(db: DatabaseSchema, channelId: string): number {
+  const existing = db.playlistItems
+    .filter((item) => item.channelId === channelId)
+    .sort((a, b) => a.position - b.position);
+  if (existing.length > 0) {
+    return existing.length;
+  }
+
+  const programs = db.assets
+    .filter((asset) => asset.channelId === channelId && asset.type === "program")
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  if (programs.length === 0) {
+    return 0;
+  }
+
+  programs.forEach((asset, position) => {
+    db.playlistItems.push({
+      id: randomUUID(),
+      channelId,
+      assetId: asset.id,
+      position,
+      createdAt: nowIso()
+    });
+  });
+
+  return programs.length;
 }
 
 function orderedPlaylistAssets(db: DatabaseSchema, channelId: string): Asset[] {
@@ -469,6 +498,14 @@ async function applyCommand(command: PlayoutCommand) {
       if (!channel) {
         state.isRunning = false;
         state.lastError = "Start ignored: channel no longer exists.";
+        state.updatedAt = nowIso();
+        return { shouldStart: false };
+      }
+
+      const playlistCount = ensureProgramPlaylist(db, command.channelId);
+      if (playlistCount === 0) {
+        state.isRunning = false;
+        state.lastError = "Start blocked: add at least one program asset to this station.";
         state.updatedAt = nowIso();
         return { shouldStart: false };
       }
