@@ -97,6 +97,12 @@ const checks = [
     note: "Set to API URL for split-service deploys; leave blank for same-origin single-service deploys."
   },
   {
+    key: "API_PROXY_BASE_URL",
+    scope: "web",
+    required: false,
+    note: "Recommended for split-service web deploys so /api, /hls and /uploads are proxied to API."
+  },
+  {
     key: "MEDIA_BASE_URL",
     scope: "root",
     required: false,

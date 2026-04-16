@@ -146,7 +146,7 @@ railway variables --service @openchannel/web --environment production \
 
 - `@openchannel/api`: `DATABASE_URL`, `STORAGE_ROOT=/data/storage`, `WEB_ORIGIN=<web-service-url>`, `LIVEPEER_API_KEY` (optional), `PINATA_JWT` (optional)
 - `@openchannel/worker`: `DATABASE_URL`, `STORAGE_ROOT=/data/storage`, `MEDIA_BASE_URL=<api-service-url>`, `WORKER_POLL_INTERVAL_MS` (optional)
-- `@openchannel/web`: `VITE_API_BASE=<api-service-url>`
+- `@openchannel/web`: `API_PROXY_BASE_URL=<api-service-url>` (recommended), `VITE_API_BASE=<api-service-url>` (optional build-time override)
 
 #### Domains
 
@@ -159,7 +159,7 @@ railway domain --service @openchannel/web
 
 Then set:
 - `WEB_ORIGIN` on API to your web domain
-- `VITE_API_BASE` on Web to your API domain
+- `API_PROXY_BASE_URL` on Web to your API domain
 
 #### Deploy
 
