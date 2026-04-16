@@ -124,19 +124,22 @@ This keeps deploys and scaling independent and is the correct base for future co
 ```bash
 # API service
 railway variables --service @openchannel/api --environment production \
-  --set 'RAILPACK_BUILD_CMD=npm run build:service:api' \
-  --set 'RAILPACK_START_CMD=npm run start:service:api' \
+  --set 'NIXPACKS_BUILD_CMD=npm run build:service:api' \
+  --set 'NIXPACKS_START_CMD=npm run start:service:api' \
+  --set 'NIXPACKS_NODE_VERSION=22.12.0' \
   --set 'SERVE_WEB_APP=false'
 
 # Worker service
 railway variables --service @openchannel/worker --environment production \
-  --set 'RAILPACK_BUILD_CMD=npm run build:service:worker' \
-  --set 'RAILPACK_START_CMD=npm run start:service:worker'
+  --set 'NIXPACKS_BUILD_CMD=npm run build:service:worker' \
+  --set 'NIXPACKS_START_CMD=npm run start:service:worker' \
+  --set 'NIXPACKS_NODE_VERSION=22.12.0'
 
 # Web service
 railway variables --service @openchannel/web --environment production \
-  --set 'RAILPACK_BUILD_CMD=npm run build:service:web' \
-  --set 'RAILPACK_START_CMD=npm run start:service:web'
+  --set 'NIXPACKS_BUILD_CMD=npm run build:service:web' \
+  --set 'NIXPACKS_START_CMD=npm run start:service:web' \
+  --set 'NIXPACKS_NODE_VERSION=22.12.0'
 ```
 
 #### Required runtime variables

@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "if [ -n \"$RAILWAY_ENVIRONMENT\" ]; then node dist/server.js; else tsx watch src/server.ts; fi",
     "start": "node dist/server.js",
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run build -w @openchannel/shared && tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "echo \"No lint configured for api\""
   },

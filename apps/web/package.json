@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "if [ -n \"$RAILWAY_ENVIRONMENT\" ]; then node server.mjs; else vite; fi",
     "build": "tsc -p tsconfig.json && vite build",
     "start": "node server.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
