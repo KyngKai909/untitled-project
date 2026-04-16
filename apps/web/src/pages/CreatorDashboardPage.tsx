@@ -5,6 +5,7 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
+import { Progress } from "../components/ui/progress";
 import { Textarea } from "../components/ui/textarea";
 import type { Asset, AssetInsertionCategory, ChannelSummary, PlayoutState, StreamMode } from "../types";
 import { disconnectWallet, formatWalletAddress, getStoredWalletAddress } from "../wallet";
@@ -61,6 +62,9 @@ export default function CreatorDashboardPage() {
   const [libraryTitle, setLibraryTitle] = useState("");
   const [libraryKind, setLibraryKind] = useState<AssetInsertionCategory>("program");
   const [uploadingLibrary, setUploadingLibrary] = useState(false);
+  const [libraryUploadPercent, setLibraryUploadPercent] = useState(0);
+  const [libraryUploadLoadedBytes, setLibraryUploadLoadedBytes] = useState(0);
+  const [libraryUploadTotalBytes, setLibraryUploadTotalBytes] = useState(0);
 
   if (!wallet) {
     return <Navigate to="/" replace />;
@@ -176,6 +180,9 @@ export default function CreatorDashboardPage() {
     const normalized = mapLibraryKindToApi(libraryKind);
 
     setUploadingLibrary(true);
+    setLibraryUploadPercent(0);
+    setLibraryUploadLoadedBytes(0);
+    setLibraryUploadTotalBytes(0);
     setError(null);
     setInfo(null);
 
@@ -185,7 +192,12 @@ export default function CreatorDashboardPage() {
         file: libraryFile,
         title: libraryTitle.trim() || undefined,
         type: normalized.type,
-        insertionCategory: normalized.insertionCategory
+        insertionCategory: normalized.insertionCategory,
+        onProgress: (progress) => {
+          setLibraryUploadPercent(progress.percent);
+          setLibraryUploadLoadedBytes(progress.loaded);
+          setLibraryUploadTotalBytes(progress.total);
+        }
       });
 
       setLibraryFile(null);
@@ -205,6 +217,8 @@ export default function CreatorDashboardPage() {
       setError(err instanceof Error ? err.message : "Failed to upload to library");
     } finally {
       setUploadingLibrary(false);
+      setLibraryUploadLoadedBytes(0);
+      setLibraryUploadTotalBytes(0);
     }
   }
 
@@ -329,6 +343,25 @@ export default function CreatorDashboardPage() {
                   <Button type="submit" disabled={uploadingLibrary || !libraryFile}>
                     {uploadingLibrary ? "Uploading..." : "Upload To Global Library"}
                   </Button>
+                  {uploadingLibrary ? (
+                    <div className="rounded-md border border-slate-800 p-3">
+                      <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
+                        <span>
+                          {libraryUploadPercent < 100
+                            ? "Uploading file"
+                            : "Upload complete, processing/compressing"}
+                        </span>
+                        <span>{libraryUploadPercent}%</span>
+                      </div>
+                      <Progress value={libraryUploadPercent} />
+                      {libraryUploadTotalBytes > 0 ? (
+                        <p className="mt-2 text-xs text-slate-500">
+                          {Math.round(libraryUploadLoadedBytes / (1024 * 1024))}MB /{" "}
+                          {Math.round(libraryUploadTotalBytes / (1024 * 1024))}MB
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </form>
 
                 <div className="space-y-2">

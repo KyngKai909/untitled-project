@@ -29,6 +29,12 @@ class ApiError extends Error {
   }
 }
 
+export interface UploadProgress {
+  loaded: number;
+  total: number;
+  percent: number;
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = API_BASE ? `${API_BASE}${path}` : path;
   const response = await fetch(url, {
@@ -47,6 +53,60 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   return payload as T;
+}
+
+function uploadRequest<T>(
+  path: string,
+  formData: FormData,
+  onProgress?: (progress: UploadProgress) => void
+): Promise<T> {
+  const url = API_BASE ? `${API_BASE}${path}` : path;
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url, true);
+    xhr.responseType = "json";
+    xhr.setRequestHeader("Accept", "application/json");
+
+    xhr.upload.onprogress = (event) => {
+      if (!onProgress || !event.lengthComputable || event.total <= 0) {
+        return;
+      }
+      const percent = Math.max(0, Math.min(100, Math.round((event.loaded / event.total) * 100)));
+      onProgress({
+        loaded: event.loaded,
+        total: event.total,
+        percent
+      });
+    };
+
+    xhr.onerror = () => {
+      reject(new ApiError(0, "Network error during upload."));
+    };
+
+    xhr.onload = () => {
+      const contentType = xhr.getResponseHeader("content-type") ?? "";
+      const payload =
+        contentType.includes("application/json")
+          ? (xhr.response ??
+            (() => {
+              try {
+                return xhr.responseText ? JSON.parse(xhr.responseText) : null;
+              } catch {
+                return null;
+              }
+            })())
+          : null;
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(payload as T);
+        return;
+      }
+
+      reject(new ApiError(xhr.status || 500, payload?.error ?? `Request failed (${xhr.status || 500})`));
+    };
+
+    xhr.send(formData);
+  });
 }
 
 export function getApiBase(): string {
@@ -109,7 +169,13 @@ export async function getChannelDetail(channelId: string): Promise<ChannelDetail
 
 export async function uploadAsset(
   channelId: string,
-  input: { file: File; title?: string; type: AssetType; insertionCategory?: AssetInsertionCategory }
+  input: {
+    file: File;
+    title?: string;
+    type: AssetType;
+    insertionCategory?: AssetInsertionCategory;
+    onProgress?: (progress: UploadProgress) => void;
+  }
 ): Promise<{ asset: Asset; ipfsWarning?: string; compressionWarning?: string }> {
   const form = new FormData();
   form.set("file", input.file);
@@ -121,10 +187,7 @@ export async function uploadAsset(
     form.set("insertionCategory", input.insertionCategory);
   }
 
-  return request(`/api/channels/${channelId}/assets/upload`, {
-    method: "POST",
-    body: form
-  });
+  return uploadRequest(`/api/channels/${channelId}/assets/upload`, form, input.onProgress);
 }
 
 export async function listLibraryAssets(ownerWallet: string, type?: AssetType): Promise<Asset[]> {
@@ -143,6 +206,7 @@ export async function uploadLibraryAsset(input: {
   title?: string;
   type: AssetType;
   insertionCategory?: AssetInsertionCategory;
+  onProgress?: (progress: UploadProgress) => void;
 }): Promise<{ asset: Asset; ipfsWarning?: string; compressionWarning?: string }> {
   const form = new FormData();
   form.set("ownerWallet", input.ownerWallet);
@@ -155,10 +219,7 @@ export async function uploadLibraryAsset(input: {
     form.set("insertionCategory", input.insertionCategory);
   }
 
-  return request(`/api/library/assets/upload`, {
-    method: "POST",
-    body: form
-  });
+  return uploadRequest(`/api/library/assets/upload`, form, input.onProgress);
 }
 
 export async function importLibraryAssetsToChannel(
