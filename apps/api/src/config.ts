@@ -15,6 +15,11 @@ export const HLS_ROOT = path.join(STORAGE_ROOT, "hls");
 export const DB_PATH = path.join(STORAGE_ROOT, "db.json");
 export const DB_LOCK_PATH = path.join(STORAGE_ROOT, "db.lock");
 export const WEB_DIST_DIR = resolveWebDistDir(process.env.WEB_DIST_DIR);
+export const KEEP_ORIGINAL_UPLOADS = String(process.env.KEEP_ORIGINAL_UPLOADS ?? "false") === "true";
+export const MAX_COMPRESSION_INPUT_BYTES = parsePositiveIntEnv(
+  process.env.MAX_COMPRESSION_INPUT_BYTES,
+  1024 * 1024 * 1024
+);
 
 export const LIVEPEER_API_KEY = process.env.LIVEPEER_API_KEY ?? "";
 export const LIVEPEER_API_BASE = process.env.LIVEPEER_API_BASE ?? "https://livepeer.studio/api";

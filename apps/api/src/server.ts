@@ -26,7 +26,9 @@ import type {
 import {
   API_PORT,
   HLS_ROOT,
+  KEEP_ORIGINAL_UPLOADS,
   LIVEPEER_DEFAULT_ENABLED,
+  MAX_COMPRESSION_INPUT_BYTES,
   UPLOAD_ROOT,
   WEB_DIST_DIR,
   WEB_ORIGIN
@@ -38,6 +40,7 @@ import {
   compressForStreaming,
   expandExternalUrls,
   ingestFromExternalUrl,
+  isNoSpaceCompressionError,
   probeDurationSec,
   probeMediaKind
 } from "./media.js";
@@ -215,6 +218,10 @@ function normalizeWalletAddress(value: unknown): string | undefined {
     return undefined;
   }
   return /^0x[a-f0-9]{40}$/.test(trimmed) ? trimmed : undefined;
+}
+
+function formatMiB(valueBytes: number): string {
+  return `${Math.round(valueBytes / (1024 * 1024))}MB`;
 }
 
 function normalizeBackgroundUploadPath(value: unknown): string | undefined {
@@ -1349,27 +1356,46 @@ app.post("/api/library/assets/upload", upload.single("file"), async (req, res) =
   const assetId = uuidv4();
   const uploadedPath = await moveUploadedFile(req.file.path, libraryScopeId, assetId, req.file.originalname);
   const mediaKind = await probeMediaKind(uploadedPath);
+  const uploadSizeBytes = Number.isFinite(req.file.size) ? Math.max(0, Math.floor(req.file.size)) : undefined;
   let streamReadyPath = uploadedPath;
   let originalLocalPath: string | undefined;
   let compression: Asset["compression"];
   let compressionWarning: string | undefined;
 
-  try {
-    const compressed = await compressForStreaming(
-      uploadedPath,
-      path.join(UPLOAD_ROOT, toStorageScopeId(libraryScopeId), "compressed"),
-      assetId,
-      mediaKind
-    );
-    streamReadyPath = compressed.outputPath;
-    originalLocalPath = uploadedPath;
-    compression = {
-      tool: "ffmpeg",
-      profile: compressed.profile,
-      compressedAt: nowIso()
-    };
-  } catch (error) {
-    compressionWarning = error instanceof Error ? error.message : "FFmpeg compression failed.";
+  if (uploadSizeBytes && uploadSizeBytes > MAX_COMPRESSION_INPUT_BYTES) {
+    compressionWarning = `Compression skipped for large upload (${formatMiB(uploadSizeBytes)} > ${formatMiB(
+      MAX_COMPRESSION_INPUT_BYTES
+    )}). Using source file directly for faster ingest.`;
+  } else {
+    try {
+      const compressed = await compressForStreaming(
+        uploadedPath,
+        path.join(UPLOAD_ROOT, toStorageScopeId(libraryScopeId), "compressed"),
+        assetId,
+        mediaKind
+      );
+      streamReadyPath = compressed.outputPath;
+      compression = {
+        tool: "ffmpeg",
+        profile: compressed.profile,
+        compressedAt: nowIso()
+      };
+    } catch (error) {
+      if (isNoSpaceCompressionError(error)) {
+        compressionWarning =
+          "Compression skipped because storage is full (ENOSPC). Using source file directly; free space or increase volume to restore compression.";
+      } else {
+        compressionWarning = error instanceof Error ? error.message : "FFmpeg compression failed.";
+      }
+    }
+  }
+
+  if (streamReadyPath !== uploadedPath) {
+    if (KEEP_ORIGINAL_UPLOADS) {
+      originalLocalPath = uploadedPath;
+    } else {
+      await fs.unlink(uploadedPath).catch(() => undefined);
+    }
   }
 
   const durationSec = await probeDurationSec(streamReadyPath);
@@ -1432,27 +1458,46 @@ app.post("/api/channels/:channelId/assets/upload", upload.single("file"), async 
   const assetId = uuidv4();
   const uploadedPath = await moveUploadedFile(req.file.path, channel.id, assetId, req.file.originalname);
   const mediaKind = await probeMediaKind(uploadedPath);
+  const uploadSizeBytes = Number.isFinite(req.file.size) ? Math.max(0, Math.floor(req.file.size)) : undefined;
   let streamReadyPath = uploadedPath;
   let originalLocalPath: string | undefined;
   let compression: Asset["compression"];
   let compressionWarning: string | undefined;
 
-  try {
-    const compressed = await compressForStreaming(
-      uploadedPath,
-      path.join(UPLOAD_ROOT, toStorageScopeId(channel.id), "compressed"),
-      assetId,
-      mediaKind
-    );
-    streamReadyPath = compressed.outputPath;
-    originalLocalPath = uploadedPath;
-    compression = {
-      tool: "ffmpeg",
-      profile: compressed.profile,
-      compressedAt: nowIso()
-    };
-  } catch (error) {
-    compressionWarning = error instanceof Error ? error.message : "FFmpeg compression failed.";
+  if (uploadSizeBytes && uploadSizeBytes > MAX_COMPRESSION_INPUT_BYTES) {
+    compressionWarning = `Compression skipped for large upload (${formatMiB(uploadSizeBytes)} > ${formatMiB(
+      MAX_COMPRESSION_INPUT_BYTES
+    )}). Using source file directly for faster ingest.`;
+  } else {
+    try {
+      const compressed = await compressForStreaming(
+        uploadedPath,
+        path.join(UPLOAD_ROOT, toStorageScopeId(channel.id), "compressed"),
+        assetId,
+        mediaKind
+      );
+      streamReadyPath = compressed.outputPath;
+      compression = {
+        tool: "ffmpeg",
+        profile: compressed.profile,
+        compressedAt: nowIso()
+      };
+    } catch (error) {
+      if (isNoSpaceCompressionError(error)) {
+        compressionWarning =
+          "Compression skipped because storage is full (ENOSPC). Using source file directly; free space or increase volume to restore compression.";
+      } else {
+        compressionWarning = error instanceof Error ? error.message : "FFmpeg compression failed.";
+      }
+    }
+  }
+
+  if (streamReadyPath !== uploadedPath) {
+    if (KEEP_ORIGINAL_UPLOADS) {
+      originalLocalPath = uploadedPath;
+    } else {
+      await fs.unlink(uploadedPath).catch(() => undefined);
+    }
   }
 
   const durationSec = await probeDurationSec(streamReadyPath);

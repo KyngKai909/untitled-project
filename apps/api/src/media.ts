@@ -350,6 +350,17 @@ export interface CompressionResult {
   profile: "h264_aac_720p" | "aac_audio";
 }
 
+function isNoSpaceErrorText(value: string): boolean {
+  return /no space left on device|enospc/i.test(value);
+}
+
+export function isNoSpaceCompressionError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  return isNoSpaceErrorText(error.message);
+}
+
 export async function compressForStreaming(
   inputPath: string,
   outputDir: string,
@@ -380,6 +391,11 @@ export async function compressForStreaming(
     );
 
     if (result.code !== 0) {
+      try {
+        await fs.unlink(outputPath);
+      } catch {
+        // Ignore missing/truncated outputs.
+      }
       throw new Error(`FFmpeg audio compression failed. ${result.stderr.slice(-320)}`);
     }
 
@@ -423,6 +439,11 @@ export async function compressForStreaming(
   );
 
   if (result.code !== 0) {
+    try {
+      await fs.unlink(outputPath);
+    } catch {
+      // Ignore missing/truncated outputs.
+    }
     throw new Error(`FFmpeg video compression failed. ${result.stderr.slice(-320)}`);
   }
 
