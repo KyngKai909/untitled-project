@@ -10,6 +10,7 @@ loadEnvFile(path.join(workspaceRoot, ".env"));
 export const API_PORT = Number(process.env.PORT ?? process.env.API_PORT ?? 8787);
 export const WEB_ORIGIN = process.env.WEB_ORIGIN ?? "*";
 export const STORAGE_ROOT = resolveStorageRoot(process.env.STORAGE_ROOT);
+export const DATABASE_URL = process.env.DATABASE_URL?.trim() ?? "";
 export const UPLOAD_ROOT = path.join(STORAGE_ROOT, "uploads");
 export const HLS_ROOT = path.join(STORAGE_ROOT, "hls");
 export const DB_PATH = path.join(STORAGE_ROOT, "db.json");

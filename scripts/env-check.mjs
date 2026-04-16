@@ -65,6 +65,14 @@ const checks = [
     note: railwayDetected ? "Set this to /data/storage on Railway." : "Recommended for custom local location."
   },
   {
+    key: "DATABASE_URL",
+    scope: "root",
+    required: railwayDetected,
+    note: railwayDetected
+      ? "Required for PostgreSQL-backed state in production."
+      : "Optional locally; when unset, JSON file storage is used."
+  },
+  {
     key: "WEB_ORIGIN",
     scope: "root",
     required: false,

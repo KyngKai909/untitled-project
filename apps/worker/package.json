@@ -11,10 +11,12 @@
     "lint": "echo \"No lint configured for worker\""
   },
   "dependencies": {
-    "@openchannel/shared": "0.1.0"
+    "@openchannel/shared": "0.1.0",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
+    "@types/pg": "^8.20.0",
     "tsx": "^4.20.6"
   }
 }

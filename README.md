@@ -30,7 +30,7 @@ Out of scope for this core pass:
 - `apps/api`: Express API for channel/content/schedule/live control
 - `apps/worker`: continuous playout worker (queue + HLS output + Livepeer forwarder)
 - `packages/shared`: shared TS domain models
-- `storage`: local files + HLS output + `db.json`
+- `storage`: local files + HLS output (state persists in PostgreSQL when `DATABASE_URL` is set)
 
 ### Media pipeline
 
@@ -42,6 +42,11 @@ Out of scope for this core pass:
 - Worker decodes that source and repackages to rolling HLS segments for playback
 
 This gives a practical compress/decompress flow using free open-source FFmpeg.
+
+### State persistence
+
+- If `DATABASE_URL` is configured, API + worker persist shared state in PostgreSQL (`opencast_state` table).
+- If `DATABASE_URL` is not configured, local JSON fallback is used at `storage/db.json` (dev convenience only).
 
 ## On-chain + decentralized focus
 
@@ -86,6 +91,7 @@ API:
 
 Use `.env.example` as baseline. Important keys:
 
+- `DATABASE_URL` (recommended; enables PostgreSQL-backed shared state)
 - `LIVEPEER_API_KEY` (for provisioning and using Livepeer playback)
 - `PINATA_JWT` (for IPFS pinning)
 - `STORAGE_ROOT` (optional, defaults to `./storage`)
@@ -121,10 +127,11 @@ railway up
 
 - `WEB_ORIGIN=*` (or your Railway app URL)
 - `STORAGE_ROOT=/data/storage` (recommended)
+- `DATABASE_URL=<Railway Postgres connection string>` (recommended for production)
 - `LIVEPEER_API_KEY` (optional but required for Livepeer provisioning)
 - `PINATA_JWT` (optional for IPFS pinning)
 
 ### Railway runtime notes
 
-- Attach a persistent volume mounted at `/data` if you want uploads/database to persist across deploys.
-- Keep service replica count at `1` for the JSON+lockfile MVP data layer.
+- Attach a persistent volume mounted at `/data` if you want uploads/HLS artifacts to persist across deploys.
+- Keep service replica count at `1` for the single-worker playout loop.
