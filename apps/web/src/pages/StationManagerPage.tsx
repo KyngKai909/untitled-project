@@ -20,6 +20,8 @@ import OverlayPanel from "../components/OverlayPanel";
 import type { Asset, ChannelDetail, StreamMode } from "../types";
 import { getStoredWalletAddress } from "../wallet";
 
+type ManagerTab = "monitor" | "playlist" | "runtime" | "ads";
+
 function formatDateTime(iso: string | undefined): string {
   if (!iso) {
     return "Not set";
@@ -110,11 +112,15 @@ function findClosestIndex(ids: string[], targetId: string | undefined, preferred
 
 export default function StationManagerPage() {
   const { channelId } = useParams();
+
   const [detail, setDetail] = useState<ChannelDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+
+  const [tab, setTab] = useState<ManagerTab>("monitor");
+  const [railOpen, setRailOpen] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -134,13 +140,11 @@ export default function StationManagerPage() {
   const [adInterval, setAdInterval] = useState(2);
   const [adTimeIntervalSec, setAdTimeIntervalSec] = useState(600);
 
-  const [nowMs, setNowMs] = useState(() => Date.now());
-
-  const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
-  const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [importProgramsModalOpen, setImportProgramsModalOpen] = useState(false);
   const [importAdsModalOpen, setImportAdsModalOpen] = useState(false);
+
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   async function refresh() {
     if (!channelId) {
@@ -624,341 +628,20 @@ export default function StationManagerPage() {
 
   if (!channelId) {
     return (
-      <main className="routeFrame">
+      <main className="routeFrame routeFrame--workspace">
         <div className="inlineAlert inlineAlert--error">Channel id is missing.</div>
       </main>
     );
   }
 
-  const playlistWorkbench = (
+  const rail = (
     <>
-      <header className="paneHead">
-        <div>
-          <h3>Playlist Workbench</h3>
-          <p>Add programs and sequence draft queue.</p>
+      <section className="railBlock">
+        <div className="railBlock__head">
+          <h3>Station Actions</h3>
+          <p>Primary live control actions.</p>
         </div>
-      </header>
-      <div className="paneBody">
-        <section className="stageSection">
-          <div className="stageSection__head">
-            <div>
-              <h3>Station Programs</h3>
-              <p>{stationPrograms.length} available</p>
-            </div>
-            <button
-              className="uiButton uiButton--secondary"
-              type="button"
-              onClick={() => {
-                setImportProgramsModalOpen(true);
-                setLeftDrawerOpen(false);
-              }}
-            >
-              Import
-            </button>
-          </div>
-          <div className="stageSection__body">
-            {stationPrograms.length === 0 ? <p className="emptyState">No programs yet. Import from global library.</p> : null}
-            {stationPrograms.length > 0 ? (
-              <div className="dataTable">
-                {stationPrograms.map((asset) => (
-                  <article className="dataRow" key={asset.id}>
-                    <div>
-                      <p className="dataRow__title">{asset.title}</p>
-                      <p className="dataRow__meta">{formatDuration(asset.durationSec)}</p>
-                    </div>
-                    <div className="dataRow__actions">
-                      <button className="uiButton uiButton--secondary" type="button" onClick={() => addProgramToDraft(asset.id)} disabled={busy}>
-                        Add
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        </section>
-
-        <section className="stageSection">
-          <div className="stageSection__head">
-            <div>
-              <h3>Draft Queue</h3>
-              <p>{queuePreview.length} items staged</p>
-            </div>
-          </div>
-          <div className="stageSection__body">
-            {queuePreview.length === 0 ? <p className="emptyState">Draft queue is empty.</p> : null}
-            {queuePreview.length > 0 ? (
-              <div className="dataTable">
-                {queuePreview.map((asset, index) => (
-                  <article className="dataRow" key={`${asset.id}-${index}`}>
-                    <div>
-                      <p className="dataRow__title">{index + 1}. {asset.title}</p>
-                      <p className="dataRow__meta">{formatDuration(asset.durationSec)}</p>
-                    </div>
-                    <div className="dataRow__actions">
-                      <button
-                        className="uiButton uiButton--secondary"
-                        type="button"
-                        disabled={busy || index === 0}
-                        onClick={() => moveDraftItem(index, -1)}
-                      >
-                        Up
-                      </button>
-                      <button
-                        className="uiButton uiButton--secondary"
-                        type="button"
-                        disabled={busy || index === queuePreview.length - 1}
-                        onClick={() => moveDraftItem(index, 1)}
-                      >
-                        Down
-                      </button>
-                      <button className="uiButton uiButton--danger" type="button" disabled={busy} onClick={() => removeDraftItem(index)}>
-                        Remove
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : null}
-
-            <button className="uiButton uiButton--accent" type="button" onClick={() => void onSaveQueue()} disabled={busy}>
-              Push Playlist
-            </button>
-          </div>
-        </section>
-      </div>
-    </>
-  );
-
-  const operationsRail = (
-    <>
-      <header className="paneHead">
-        <div>
-          <h3>Operations Rail</h3>
-          <p>Routing, profile, schedule, and ad logic.</p>
-        </div>
-        <button className="uiButton uiButton--ghost" type="button" onClick={() => void refresh()} disabled={loading}>
-          Refresh
-        </button>
-      </header>
-      <div className="paneBody">
-        <section className="stageSection">
-          <div className="stageSection__head">
-            <div>
-              <h3>Station Profile</h3>
-              <p>Metadata and stream mode.</p>
-            </div>
-          </div>
-          <div className="stageSection__body">
-            <label className="field">
-              <span>Name</span>
-              <input className="uiInput" value={name} onChange={(event) => setName(event.target.value)} disabled={busy} />
-            </label>
-            <label className="field">
-              <span>Description</span>
-              <textarea className="uiTextarea" value={description} onChange={(event) => setDescription(event.target.value)} disabled={busy} />
-            </label>
-            <label className="field">
-              <span>Stream Mode</span>
-              <select
-                className="uiSelect"
-                value={streamMode}
-                onChange={(event) => setStreamMode(event.target.value === "radio" ? "radio" : "video")}
-                disabled={busy}
-              >
-                <option value="video">Video</option>
-                <option value="radio">Radio</option>
-              </select>
-            </label>
-            <button className="uiButton uiButton--accent" type="button" onClick={() => void onSaveStationProfile()} disabled={busy}>
-              Save Profile
-            </button>
-          </div>
-        </section>
-
-        <section className="stageSection">
-          <div className="stageSection__head">
-            <div>
-              <h3>Output Routing</h3>
-              <p>Livepeer provisioning and output selection.</p>
-            </div>
-          </div>
-          <div className="stageSection__body">
-            <p className="metaLine">{streamUrl || "No stream URL yet"}</p>
-            <div className="pageBanner__actions">
-              <button className="uiButton uiButton--secondary" type="button" onClick={() => void onProvisionLivepeer()} disabled={busy}>
-                Provision Livepeer
-              </button>
-              <button
-                className="uiButton uiButton--secondary"
-                type="button"
-                onClick={() => void onToggleLivepeer(!(detail?.livepeer?.enabled ?? false))}
-                disabled={busy}
-              >
-                {detail?.livepeer?.enabled ? "Disable Livepeer" : "Enable Livepeer"}
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <section className="stageSection">
-          <div className="stageSection__head">
-            <div>
-              <h3>Schedule + Imports</h3>
-              <p>Modal workflows for runtime windows and asset intake.</p>
-            </div>
-          </div>
-          <div className="stageSection__body">
-            <button
-              className="uiButton uiButton--secondary"
-              type="button"
-              onClick={() => {
-                setScheduleModalOpen(true);
-                setRightDrawerOpen(false);
-              }}
-            >
-              Create Schedule
-            </button>
-            <button
-              className="uiButton uiButton--secondary"
-              type="button"
-              onClick={() => {
-                setImportProgramsModalOpen(true);
-                setRightDrawerOpen(false);
-              }}
-            >
-              Import Programs
-            </button>
-            <button
-              className="uiButton uiButton--secondary"
-              type="button"
-              onClick={() => {
-                setImportAdsModalOpen(true);
-                setRightDrawerOpen(false);
-              }}
-            >
-              Import Ads
-            </button>
-            <button className="uiButton uiButton--accent" type="button" onClick={() => void onStartAlwaysOnNow()} disabled={busy}>
-              Start 24/7 Now
-            </button>
-          </div>
-        </section>
-
-        <section className="stageSection">
-          <div className="stageSection__head">
-            <div>
-              <h3>Ad Injection Rules</h3>
-              <p>Trigger policy for ad/sponsor units.</p>
-            </div>
-          </div>
-          <div className="stageSection__body">
-            <label className="field">
-              <span>Trigger Mode</span>
-              <select
-                className="uiSelect"
-                value={adTriggerMode}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  if (value === "disabled" || value === "time_interval") {
-                    setAdTriggerMode(value);
-                    return;
-                  }
-                  setAdTriggerMode("every_n_programs");
-                }}
-                disabled={busy}
-              >
-                <option value="disabled">Disabled</option>
-                <option value="every_n_programs">Every N Programs</option>
-                <option value="time_interval">Time Interval</option>
-              </select>
-            </label>
-
-            {adTriggerMode === "every_n_programs" ? (
-              <label className="field">
-                <span>Programs Interval</span>
-                <input
-                  className="uiInput"
-                  type="number"
-                  min={1}
-                  value={adInterval}
-                  onChange={(event) => setAdInterval(Number(event.target.value || 1))}
-                  disabled={busy}
-                />
-              </label>
-            ) : null}
-
-            {adTriggerMode === "time_interval" ? (
-              <label className="field">
-                <span>Seconds Interval</span>
-                <input
-                  className="uiInput"
-                  type="number"
-                  min={30}
-                  value={adTimeIntervalSec}
-                  onChange={(event) => setAdTimeIntervalSec(Number(event.target.value || 30))}
-                  disabled={busy}
-                />
-              </label>
-            ) : null}
-
-            <button className="uiButton uiButton--accent" type="button" onClick={() => void onSaveAdRules()} disabled={busy}>
-              Save Ad Rules
-            </button>
-          </div>
-        </section>
-
-        <section className="stageSection">
-          <div className="stageSection__head">
-            <div>
-              <h3>Station Ad Pool</h3>
-              <p>{stationAds.length} ad assets linked</p>
-            </div>
-          </div>
-          <div className="stageSection__body">
-            {stationAds.length === 0 ? <p className="emptyState">No ad assets in this station.</p> : null}
-            {stationAds.length > 0 ? (
-              <div className="dataTable">
-                {stationAds.map((asset) => (
-                  <article className="dataRow" key={asset.id}>
-                    <div>
-                      <p className="dataRow__title">{asset.title}</p>
-                      <p className="dataRow__meta">
-                        {asset.insertionCategory ?? "ad"} · {formatDuration(asset.durationSec)}
-                      </p>
-                    </div>
-                    <div className="dataRow__actions">
-                      <button className="uiButton uiButton--danger" type="button" onClick={() => void onDeleteAsset(asset.id)} disabled={busy}>
-                        Remove
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        </section>
-      </div>
-    </>
-  );
-
-  return (
-    <main className="routeFrame">
-      <section className="pageBanner">
-        <div className="pageBanner__meta">
-          <span className="miniTag miniTag--accent">Station Console</span>
-          <span className="miniTag">ID {channelId.slice(0, 8)}</span>
-          {detail ? (
-            <span className={`statusPill ${detail.state.isRunning ? "statusPill--live" : "statusPill--off"}`}>
-              {detail.state.isRunning ? "Live" : "Off Air"}
-            </span>
-          ) : null}
-        </div>
-        <h1>{detail?.channel.name ?? "Loading Station"}</h1>
-        <p>
-          Three-pane operations surface for playlist sequencing, output control, ad strategy, and schedule orchestration.
-        </p>
-        <div className="pageBanner__actions">
+        <div className="stackActions">
           <Link className="uiButton uiButton--secondary" to="/dashboard">Back to Workspace</Link>
           <Link className="uiButton uiButton--secondary" to={`/stations/${channelId}/preview`}>Preview Feed</Link>
           <button className="uiButton uiButton--accent" type="button" onClick={() => void onControl("start")} disabled={busy}>
@@ -967,162 +650,448 @@ export default function StationManagerPage() {
           <button className="uiButton uiButton--danger" type="button" onClick={() => void onControl("stop")} disabled={busy}>
             Stop
           </button>
-          <button className="uiButton uiButton--ghost mobileOnly" type="button" onClick={() => setLeftDrawerOpen(true)}>
-            Playlist Pane
+          <button className="uiButton uiButton--secondary" type="button" onClick={() => void onControl("previous")} disabled={busy}>
+            Previous
           </button>
-          <button className="uiButton uiButton--ghost mobileOnly" type="button" onClick={() => setRightDrawerOpen(true)}>
-            Ops Rail
+          <button className="uiButton uiButton--secondary" type="button" onClick={() => void onControl("skip")} disabled={busy}>
+            Skip
           </button>
         </div>
       </section>
 
+      <section className="railBlock">
+        <div className="railBlock__head">
+          <h3>Output</h3>
+          <p className="wrapAnywhere">{streamUrl || "No stream URL yet"}</p>
+        </div>
+        <div className="stackActions">
+          <button className="uiButton uiButton--secondary" type="button" onClick={() => void onProvisionLivepeer()} disabled={busy}>
+            Provision Livepeer
+          </button>
+          <button
+            className="uiButton uiButton--secondary"
+            type="button"
+            onClick={() => void onToggleLivepeer(!(detail?.livepeer?.enabled ?? false))}
+            disabled={busy}
+          >
+            {detail?.livepeer?.enabled ? "Disable Livepeer" : "Enable Livepeer"}
+          </button>
+        </div>
+      </section>
+
+      <section className="railBlock">
+        <div className="railBlock__head">
+          <h3>Workflow Modals</h3>
+          <p>Open high-focus forms without overcrowding the workspace.</p>
+        </div>
+        <div className="stackActions">
+          <button className="uiButton uiButton--secondary" type="button" onClick={() => setScheduleModalOpen(true)}>
+            Create Schedule
+          </button>
+          <button className="uiButton uiButton--secondary" type="button" onClick={() => setImportProgramsModalOpen(true)}>
+            Import Programs
+          </button>
+          <button className="uiButton uiButton--secondary" type="button" onClick={() => setImportAdsModalOpen(true)}>
+            Import Ads
+          </button>
+          <button className="uiButton uiButton--accent" type="button" onClick={() => void onStartAlwaysOnNow()} disabled={busy}>
+            Start 24/7 Now
+          </button>
+        </div>
+      </section>
+    </>
+  );
+
+  return (
+    <main className="routeFrame routeFrame--workspace">
       {error ? <div className="inlineAlert inlineAlert--error">{error}</div> : null}
       {info ? <div className="inlineAlert inlineAlert--info">{info}</div> : null}
 
-      {loading || !detail ? (
-        <section className="stageSection">
-          <div className="stageSection__body">
-            <p className="loadingState">Loading station...</p>
-          </div>
-        </section>
-      ) : (
-        <section className="opsGrid">
-          <aside className="opsPane opsPane--rail">{playlistWorkbench}</aside>
+      <section className="workspaceShell workspaceShell--manager">
+        <aside className="workspaceRail">{rail}</aside>
 
-          <section className="opsPane">
-            <header className="paneHead">
-              <div>
-                <h2>Live Monitor</h2>
-                <p>Observe playout state, stream output, and transition readiness.</p>
-              </div>
-              <div className="pageBanner__actions">
-                <button className="uiButton uiButton--secondary" type="button" onClick={() => void onControl("previous")} disabled={busy}>
-                  Previous
-                </button>
-                <button className="uiButton uiButton--secondary" type="button" onClick={() => void onControl("skip")} disabled={busy}>
-                  Skip
-                </button>
-              </div>
-            </header>
-            <div className="paneBody">
-              <p className="metaLine">
-                {timeline.current ? <span>Now: {timeline.current.title}</span> : <span>Waiting for next item</span>}
-                {timeline.remainingSec !== undefined ? <span>Remaining {formatDuration(timeline.remainingSec)}</span> : null}
+        <section className="workspaceMain workspaceMain--manager">
+          <header className="workspaceHead">
+            <div>
+              <h1>{detail?.channel.name ?? "Loading station"}</h1>
+              <p>
+                Structured operator workflow for monitoring, playlist sequencing, runtime scheduling, and ad strategy.
               </p>
+              {detail ? (
+                <p className="metaLine">
+                  <span className={`statusPill ${detail.state.isRunning ? "statusPill--live" : "statusPill--off"}`}>
+                    {detail.state.isRunning ? "Live" : "Off Air"}
+                  </span>
+                  {timeline.current ? <span>Now: {timeline.current.title}</span> : <span>No active item</span>}
+                  {timeline.remainingSec !== undefined ? <span>Remaining {formatDuration(timeline.remainingSec)}</span> : null}
+                </p>
+              ) : null}
+            </div>
+            <div className="workspaceHead__actions">
+              <button className="uiButton uiButton--secondary" type="button" onClick={() => void refresh()} disabled={loading}>
+                {loading ? "Refreshing" : "Refresh"}
+              </button>
+              <button className="uiButton uiButton--ghost mobileOnly" type="button" onClick={() => setRailOpen(true)}>
+                Open Actions
+              </button>
+            </div>
+          </header>
 
-              {livepeerEmbedUrl ? (
-                <div className="mediaShell">
-                  <iframe
-                    src={livepeerEmbedUrl}
-                    title="Livepeer Player"
-                    allow="autoplay; fullscreen; picture-in-picture"
-                  />
-                </div>
-              ) : streamUrl ? (
-                <HlsPlayer src={streamUrl} muted />
-              ) : (
-                <p className="emptyState">Stream URL not available.</p>
-              )}
+          <nav className="managerTabs" aria-label="Station Workspace Tabs">
+            <button type="button" data-active={tab === "monitor"} onClick={() => setTab("monitor")}>Monitor</button>
+            <button type="button" data-active={tab === "playlist"} onClick={() => setTab("playlist")}>Playlist</button>
+            <button type="button" data-active={tab === "runtime"} onClick={() => setTab("runtime")}>Runtime</button>
+            <button type="button" data-active={tab === "ads"} onClick={() => setTab("ads")}>Ads</button>
+          </nav>
 
-              <section className="timelineBand">
-                <div className="timelineBand__group">
-                  <h4>Previously Played</h4>
-                  {timeline.previous.length === 0 ? <p className="emptyState">No history yet.</p> : null}
-                  {timeline.previous.length > 0 ? (
-                    <ol>
-                      {timeline.previous.map((asset, index) => (
-                        <li key={`${asset.id}-prev-${index}`}>{asset.title}</li>
-                      ))}
-                    </ol>
-                  ) : null}
-                </div>
-
-                <div className="timelineBand__group">
-                  <h4>Now Playing</h4>
-                  <p className="dataRow__title">{timeline.current?.title ?? "Nothing live right now"}</p>
-                  <p className="dataRow__meta">
-                    {timeline.current
-                      ? `${timeline.current.insertionCategory ?? timeline.current.type} · ${formatDuration(timeline.current.durationSec)}`
-                      : "Queue content and go live."}
-                  </p>
-                  <div className="progressBar">
-                    <span style={{ width: `${timeline.progressPct}%` }} />
-                  </div>
-                </div>
-
-                <div className="timelineBand__group">
-                  <h4>Up Next</h4>
-                  {timeline.next.length === 0 ? <p className="emptyState">No upcoming items.</p> : null}
-                  {timeline.next.length > 0 ? (
-                    <ol>
-                      {timeline.next.map((asset, index) => (
-                        <li key={`${asset.id}-next-${index}`}>{asset.title}</li>
-                      ))}
-                    </ol>
-                  ) : null}
+          <section className="workspaceContent">
+            {loading || !detail ? (
+              <section className="workspaceSection">
+                <div className="workspaceSection__body">
+                  <p className="loadingState">Loading station...</p>
                 </div>
               </section>
+            ) : null}
 
-              <section className="stageSection">
-                <div className="stageSection__head">
-                  <div>
-                    <h3>Active Schedules</h3>
-                    <p>Runtime windows currently attached to this station.</p>
+            {!loading && detail && tab === "monitor" ? (
+              <>
+                <section className="workspaceSection">
+                  <header className="workspaceSection__head">
+                    <div>
+                      <h2>Live Output Monitor</h2>
+                      <p>Real-time feed view using Livepeer when enabled, otherwise HLS stream.</p>
+                    </div>
+                  </header>
+                  <div className="workspaceSection__body">
+                    {livepeerEmbedUrl ? (
+                      <div className="mediaShell">
+                        <iframe
+                          src={livepeerEmbedUrl}
+                          title="Livepeer Player"
+                          allow="autoplay; fullscreen; picture-in-picture"
+                        />
+                      </div>
+                    ) : streamUrl ? (
+                      <HlsPlayer src={streamUrl} muted />
+                    ) : (
+                      <p className="emptyState">Stream URL not available.</p>
+                    )}
                   </div>
-                  <button
-                    className="uiButton uiButton--secondary"
-                    type="button"
-                    onClick={() => {
-                      setScheduleModalOpen(true);
-                      setRightDrawerOpen(false);
-                    }}
-                  >
-                    Add Schedule
+                </section>
+
+                <section className="workspaceSection">
+                  <header className="workspaceSection__head">
+                    <div>
+                      <h2>Timeline</h2>
+                      <p>Current progress and sequence context for playout.</p>
+                    </div>
+                  </header>
+                  <div className="workspaceSection__body">
+                    <section className="timelineBand">
+                      <div className="timelineBand__group">
+                        <h4>Previously Played</h4>
+                        {timeline.previous.length === 0 ? <p className="emptyState">No history yet.</p> : null}
+                        {timeline.previous.length > 0 ? (
+                          <ol>
+                            {timeline.previous.map((asset, index) => (
+                              <li key={`${asset.id}-prev-${index}`}>{asset.title}</li>
+                            ))}
+                          </ol>
+                        ) : null}
+                      </div>
+
+                      <div className="timelineBand__group">
+                        <h4>Now Playing</h4>
+                        <p className="dataRow__title">{timeline.current?.title ?? "Nothing live right now"}</p>
+                        <p className="dataRow__meta">
+                          {timeline.current
+                            ? `${timeline.current.insertionCategory ?? timeline.current.type} · ${formatDuration(timeline.current.durationSec)}`
+                            : "Queue content and go live."}
+                        </p>
+                        <div className="progressBar">
+                          <span style={{ width: `${timeline.progressPct}%` }} />
+                        </div>
+                      </div>
+
+                      <div className="timelineBand__group">
+                        <h4>Up Next</h4>
+                        {timeline.next.length === 0 ? <p className="emptyState">No upcoming items.</p> : null}
+                        {timeline.next.length > 0 ? (
+                          <ol>
+                            {timeline.next.map((asset, index) => (
+                              <li key={`${asset.id}-next-${index}`}>{asset.title}</li>
+                            ))}
+                          </ol>
+                        ) : null}
+                      </div>
+                    </section>
+                  </div>
+                </section>
+              </>
+            ) : null}
+
+            {!loading && detail && tab === "playlist" ? (
+              <section className="workspaceSection">
+                <header className="workspaceSection__head">
+                  <div>
+                    <h2>Playlist Workbench</h2>
+                    <p>Add programs, reorder queue, and push finalized sequence to playout.</p>
+                  </div>
+                  <button className="uiButton uiButton--secondary" type="button" onClick={() => setImportProgramsModalOpen(true)}>
+                    Import Programs
                   </button>
+                </header>
+                <div className="workspaceSection__body">
+                  <div className="managerSplit">
+                    <section className="managerSplit__pane">
+                      <header className="managerSplit__head">
+                        <div>
+                          <h3>Station Programs</h3>
+                          <p>{stationPrograms.length} available</p>
+                        </div>
+                      </header>
+                      <div className="managerSplit__body">
+                        {stationPrograms.length === 0 ? <p className="emptyState">No programs imported yet.</p> : null}
+                        {stationPrograms.length > 0 ? (
+                          <div className="dataTable">
+                            {stationPrograms.map((asset) => (
+                              <article className="dataRow" key={asset.id}>
+                                <div>
+                                  <p className="dataRow__title">{asset.title}</p>
+                                  <p className="dataRow__meta">{formatDuration(asset.durationSec)}</p>
+                                </div>
+                                <div className="dataRow__actions">
+                                  <button className="uiButton uiButton--secondary" type="button" onClick={() => addProgramToDraft(asset.id)} disabled={busy}>
+                                    Add
+                                  </button>
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    </section>
+
+                    <section className="managerSplit__pane">
+                      <header className="managerSplit__head">
+                        <div>
+                          <h3>Draft Queue</h3>
+                          <p>{queuePreview.length} staged</p>
+                        </div>
+                      </header>
+                      <div className="managerSplit__body">
+                        {queuePreview.length === 0 ? <p className="emptyState">Draft queue is empty.</p> : null}
+                        {queuePreview.length > 0 ? (
+                          <div className="dataTable">
+                            {queuePreview.map((asset, index) => (
+                              <article className="dataRow" key={`${asset.id}-${index}`}>
+                                <div>
+                                  <p className="dataRow__title">{index + 1}. {asset.title}</p>
+                                  <p className="dataRow__meta">{formatDuration(asset.durationSec)}</p>
+                                </div>
+                                <div className="dataRow__actions">
+                                  <button
+                                    className="uiButton uiButton--secondary"
+                                    type="button"
+                                    disabled={busy || index === 0}
+                                    onClick={() => moveDraftItem(index, -1)}
+                                  >
+                                    Up
+                                  </button>
+                                  <button
+                                    className="uiButton uiButton--secondary"
+                                    type="button"
+                                    disabled={busy || index === queuePreview.length - 1}
+                                    onClick={() => moveDraftItem(index, 1)}
+                                  >
+                                    Down
+                                  </button>
+                                  <button className="uiButton uiButton--danger" type="button" disabled={busy} onClick={() => removeDraftItem(index)}>
+                                    Remove
+                                  </button>
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        ) : null}
+                        <button className="uiButton uiButton--accent" type="button" onClick={() => void onSaveQueue()} disabled={busy}>
+                          Push Playlist
+                        </button>
+                      </div>
+                    </section>
+                  </div>
                 </div>
-                <div className="stageSection__body">
-                  {detail.schedules.length === 0 ? <p className="emptyState">No schedules yet.</p> : null}
-                  {detail.schedules.length > 0 ? (
-                    <div className="dataTable">
-                      {[...detail.schedules]
-                        .sort((left, right) => Date.parse(left.startAt) - Date.parse(right.startAt))
-                        .map((schedule) => (
-                          <article className="dataRow" key={schedule.id}>
+              </section>
+            ) : null}
+
+            {!loading && detail && tab === "runtime" ? (
+              <>
+                <section className="workspaceSection">
+                  <header className="workspaceSection__head">
+                    <div>
+                      <h2>Runtime Scheduling</h2>
+                      <p>Use windows for planned broadcasts or trigger always-on mode.</p>
+                    </div>
+                    <div className="workspaceHead__actions">
+                      <button className="uiButton uiButton--secondary" type="button" onClick={() => setScheduleModalOpen(true)}>
+                        Add Schedule
+                      </button>
+                      <button className="uiButton uiButton--accent" type="button" onClick={() => void onStartAlwaysOnNow()} disabled={busy}>
+                        Start 24/7 Now
+                      </button>
+                    </div>
+                  </header>
+                  <div className="workspaceSection__body">
+                    <p className="emptyState">Schedules are evaluated in chronological order.</p>
+                  </div>
+                </section>
+
+                <section className="workspaceSection">
+                  <header className="workspaceSection__head">
+                    <div>
+                      <h2>Active Schedules</h2>
+                      <p>Currently attached runtime windows for this station.</p>
+                    </div>
+                  </header>
+                  <div className="workspaceSection__body">
+                    {detail.schedules.length === 0 ? <p className="emptyState">No schedules yet.</p> : null}
+                    {detail.schedules.length > 0 ? (
+                      <div className="dataTable">
+                        {[...detail.schedules]
+                          .sort((left, right) => Date.parse(left.startAt) - Date.parse(right.startAt))
+                          .map((schedule) => (
+                            <article className="dataRow" key={schedule.id}>
+                              <div>
+                                <p className="dataRow__title">{formatDateTime(schedule.startAt)}</p>
+                                <p className="dataRow__meta">
+                                  {schedule.endAt ? `Ends ${formatDateTime(schedule.endAt)}` : "24/7 (no end)"}
+                                </p>
+                              </div>
+                              <div className="dataRow__actions">
+                                <button
+                                  className="uiButton uiButton--danger"
+                                  type="button"
+                                  onClick={() => void onDeleteSchedule(schedule.id)}
+                                  disabled={busy}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </article>
+                          ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </section>
+              </>
+            ) : null}
+
+            {!loading && detail && tab === "ads" ? (
+              <>
+                <section className="workspaceSection">
+                  <header className="workspaceSection__head">
+                    <div>
+                      <h2>Ad Injection Rules</h2>
+                      <p>Control pacing of ads, sponsors, and bumper segments.</p>
+                    </div>
+                  </header>
+                  <div className="workspaceSection__body">
+                    <label className="field">
+                      <span>Trigger Mode</span>
+                      <select
+                        className="uiSelect"
+                        value={adTriggerMode}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          if (value === "disabled" || value === "time_interval") {
+                            setAdTriggerMode(value);
+                            return;
+                          }
+                          setAdTriggerMode("every_n_programs");
+                        }}
+                        disabled={busy}
+                      >
+                        <option value="disabled">Disabled</option>
+                        <option value="every_n_programs">Every N Programs</option>
+                        <option value="time_interval">Time Interval</option>
+                      </select>
+                    </label>
+
+                    {adTriggerMode === "every_n_programs" ? (
+                      <label className="field">
+                        <span>Programs Interval</span>
+                        <input
+                          className="uiInput"
+                          type="number"
+                          min={1}
+                          value={adInterval}
+                          onChange={(event) => setAdInterval(Number(event.target.value || 1))}
+                          disabled={busy}
+                        />
+                      </label>
+                    ) : null}
+
+                    {adTriggerMode === "time_interval" ? (
+                      <label className="field">
+                        <span>Seconds Interval</span>
+                        <input
+                          className="uiInput"
+                          type="number"
+                          min={30}
+                          value={adTimeIntervalSec}
+                          onChange={(event) => setAdTimeIntervalSec(Number(event.target.value || 30))}
+                          disabled={busy}
+                        />
+                      </label>
+                    ) : null}
+
+                    <button className="uiButton uiButton--accent" type="button" onClick={() => void onSaveAdRules()} disabled={busy}>
+                      Save Rules
+                    </button>
+                  </div>
+                </section>
+
+                <section className="workspaceSection">
+                  <header className="workspaceSection__head">
+                    <div>
+                      <h2>Station Ad Pool</h2>
+                      <p>Ad assets currently linked to this station.</p>
+                    </div>
+                    <button className="uiButton uiButton--secondary" type="button" onClick={() => setImportAdsModalOpen(true)}>
+                      Import Ads
+                    </button>
+                  </header>
+                  <div className="workspaceSection__body">
+                    {stationAds.length === 0 ? <p className="emptyState">No ad assets in this station.</p> : null}
+                    {stationAds.length > 0 ? (
+                      <div className="dataTable">
+                        {stationAds.map((asset) => (
+                          <article className="dataRow" key={asset.id}>
                             <div>
-                              <p className="dataRow__title">{formatDateTime(schedule.startAt)}</p>
+                              <p className="dataRow__title">{asset.title}</p>
                               <p className="dataRow__meta">
-                                {schedule.endAt ? `Ends ${formatDateTime(schedule.endAt)}` : "24/7 (no end)"}
+                                {asset.insertionCategory ?? "ad"} · {formatDuration(asset.durationSec)}
                               </p>
                             </div>
                             <div className="dataRow__actions">
-                              <button
-                                className="uiButton uiButton--danger"
-                                type="button"
-                                onClick={() => void onDeleteSchedule(schedule.id)}
-                                disabled={busy}
-                              >
+                              <button className="uiButton uiButton--danger" type="button" onClick={() => void onDeleteAsset(asset.id)} disabled={busy}>
                                 Remove
                               </button>
                             </div>
                           </article>
                         ))}
-                    </div>
-                  ) : null}
-                </div>
-              </section>
-            </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </section>
+              </>
+            ) : null}
           </section>
-
-          <aside className="opsPane opsPane--rail">{operationsRail}</aside>
         </section>
-      )}
+      </section>
 
-      <OverlayPanel open={leftDrawerOpen} onClose={() => setLeftDrawerOpen(false)} title="Playlist Workbench" mode="left">
-        {playlistWorkbench}
-      </OverlayPanel>
-
-      <OverlayPanel open={rightDrawerOpen} onClose={() => setRightDrawerOpen(false)} title="Operations Rail" mode="right">
-        {operationsRail}
+      <OverlayPanel open={railOpen} onClose={() => setRailOpen(false)} title="Station Actions" mode="left">
+        {rail}
       </OverlayPanel>
 
       <OverlayPanel open={scheduleModalOpen} onClose={() => setScheduleModalOpen(false)} title="Create Runtime Schedule" mode="center">

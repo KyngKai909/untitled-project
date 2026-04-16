@@ -5,7 +5,7 @@ import OverlayPanel from "../components/OverlayPanel";
 import type { Asset, AssetInsertionCategory, ChannelSummary, PlayoutState, StreamMode } from "../types";
 import { disconnectWallet, formatWalletAddress, getStoredWalletAddress } from "../wallet";
 
-type DashboardSection = "library" | "stations" | "account";
+type DashboardSection = "stations" | "library" | "account";
 
 interface StationCard {
   summary: ChannelSummary;
@@ -36,7 +36,11 @@ function mapLibraryKindToApi(kind: AssetInsertionCategory): { type: "program" | 
 export default function CreatorDashboardPage() {
   const navigate = useNavigate();
   const [wallet, setWallet] = useState<string | null>(() => getStoredWalletAddress());
+
   const [section, setSection] = useState<DashboardSection>("stations");
+  const [railOpen, setRailOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   const [stations, setStations] = useState<StationCard[]>([]);
   const [loadingStations, setLoadingStations] = useState(false);
@@ -59,11 +63,6 @@ export default function CreatorDashboardPage() {
   const [libraryUploadPercent, setLibraryUploadPercent] = useState(0);
   const [libraryUploadLoadedBytes, setLibraryUploadLoadedBytes] = useState(0);
   const [libraryUploadTotalBytes, setLibraryUploadTotalBytes] = useState(0);
-
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [uploadModalOpen, setUploadModalOpen] = useState(false);
-  const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
-  const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
 
   if (!wallet) {
     return <Navigate to="/" replace />;
@@ -164,7 +163,6 @@ export default function CreatorDashboardPage() {
       setStreamMode("video");
       setCreateModalOpen(false);
       setInfo("Station created. Opening manager...");
-
       await refreshStations();
       navigate(`/stations/${response.channel.id}`);
     } catch (err) {
@@ -207,7 +205,6 @@ export default function CreatorDashboardPage() {
       setLibraryTitle("");
       setLibraryKind("program");
       setUploadModalOpen(false);
-
       setInfo(
         [
           "Library upload complete.",
@@ -217,7 +214,6 @@ export default function CreatorDashboardPage() {
           .filter(Boolean)
           .join(" ")
       );
-
       await refreshLibrary();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to upload to library");
@@ -228,22 +224,20 @@ export default function CreatorDashboardPage() {
     }
   }
 
-  const leftRail = (
+  const rail = (
     <>
-      <header className="paneHead">
-        <div>
-          <h3>Workspace Navigation</h3>
-          <p>Switch operating context.</p>
+      <section className="railBlock">
+        <div className="railBlock__head">
+          <h3>Workspace</h3>
+          <p>Choose your active operating lane.</p>
         </div>
-      </header>
-      <div className="paneBody paneBody--dense">
-        <div className="navStack">
+        <div className="railNav">
           <button
             type="button"
             data-active={section === "stations"}
             onClick={() => {
               setSection("stations");
-              setLeftDrawerOpen(false);
+              setRailOpen(false);
             }}
           >
             Stations
@@ -253,7 +247,7 @@ export default function CreatorDashboardPage() {
             data-active={section === "library"}
             onClick={() => {
               setSection("library");
-              setLeftDrawerOpen(false);
+              setRailOpen(false);
             }}
           >
             Library
@@ -263,254 +257,218 @@ export default function CreatorDashboardPage() {
             data-active={section === "account"}
             onClick={() => {
               setSection("account");
-              setLeftDrawerOpen(false);
+              setRailOpen(false);
             }}
           >
             Account
           </button>
         </div>
+      </section>
 
-        <div className="stageSection">
-          <div className="stageSection__head">
-            <div>
-              <h3>Quick Actions</h3>
-              <p>Primary creator operations.</p>
-            </div>
-          </div>
-          <div className="stageSection__body">
-            <button
-              className="uiButton uiButton--accent"
-              type="button"
-              onClick={() => {
-                setCreateModalOpen(true);
-                setLeftDrawerOpen(false);
-              }}
-            >
-              Create Station
-            </button>
-            <button
-              className="uiButton uiButton--secondary"
-              type="button"
-              onClick={() => {
-                setUploadModalOpen(true);
-                setLeftDrawerOpen(false);
-              }}
-            >
-              Upload Asset
-            </button>
-            <button className="uiButton uiButton--secondary" type="button" onClick={() => void refreshStations()} disabled={loadingStations}>
-              {loadingStations ? "Refreshing" : "Refresh Stations"}
-            </button>
-          </div>
+      <section className="railBlock">
+        <div className="railBlock__head">
+          <h3>Quick Actions</h3>
+          <p>Create assets and stations without leaving context.</p>
         </div>
-      </div>
-    </>
-  );
-
-  const rightRail = (
-    <>
-      <header className="paneHead">
-        <div>
-          <h3>Account Snapshot</h3>
-          <p>Wallet scoped totals and shortcuts.</p>
+        <div className="stackActions">
+          <button
+            className="uiButton uiButton--accent"
+            type="button"
+            onClick={() => {
+              setCreateModalOpen(true);
+              setRailOpen(false);
+            }}
+          >
+            New Station
+          </button>
+          <button
+            className="uiButton uiButton--secondary"
+            type="button"
+            onClick={() => {
+              setUploadModalOpen(true);
+              setRailOpen(false);
+            }}
+          >
+            Upload Media
+          </button>
         </div>
-      </header>
-      <div className="paneBody">
-        <section className="kpiRail">
-          <article>
-            <h4>Stations</h4>
-            <p>{snapshot.stations}</p>
-          </article>
-          <article>
-            <h4>Live</h4>
-            <p>{snapshot.live}</p>
-          </article>
-          <article>
-            <h4>Programs</h4>
-            <p>{snapshot.libraryPrograms}</p>
-          </article>
-          <article>
-            <h4>Ads / Sponsors</h4>
-            <p>{snapshot.libraryAds}</p>
-          </article>
-        </section>
+      </section>
 
-        <section className="stageSection">
-          <div className="stageSection__head">
-            <div>
-              <h3>Identity</h3>
-              <p>Current wallet session.</p>
-            </div>
-          </div>
-          <div className="stageSection__body">
-            <p className="metaLine">
-              <span className="statusPill statusPill--live">Connected</span>
-              <span>{formatWalletAddress(ownerWallet)}</span>
-            </p>
-            <button className="uiButton uiButton--danger" type="button" onClick={onDisconnectWallet}>
-              Disconnect Wallet
-            </button>
-          </div>
-        </section>
-      </div>
+      <section className="railBlock">
+        <div className="railBlock__head">
+          <h3>Session</h3>
+          <p>{formatWalletAddress(ownerWallet)}</p>
+        </div>
+        <button className="uiButton uiButton--danger" type="button" onClick={onDisconnectWallet}>
+          Disconnect Wallet
+        </button>
+      </section>
     </>
   );
 
   return (
-    <main className="routeFrame">
-      <section className="pageBanner">
-        <div className="pageBanner__meta">
-          <span className="miniTag miniTag--accent">Creator Workspace</span>
-          <span className="miniTag">Wallet {formatWalletAddress(ownerWallet)}</span>
-        </div>
-        <h1>Command center for media operations, station control, and live readiness.</h1>
-        <p>
-          Multi-pane interface with modal workflows for creation and upload, optimized for daily operation across desktop and mobile.
-        </p>
-        <div className="pageBanner__actions">
-          <button className="uiButton uiButton--accent" type="button" onClick={() => setCreateModalOpen(true)}>
-            New Station
-          </button>
-          <button className="uiButton uiButton--secondary" type="button" onClick={() => setUploadModalOpen(true)}>
-            Upload Media
-          </button>
-          <button className="uiButton uiButton--ghost mobileOnly" type="button" onClick={() => setLeftDrawerOpen(true)}>
-            Open Navigation
-          </button>
-          <button className="uiButton uiButton--ghost mobileOnly" type="button" onClick={() => setRightDrawerOpen(true)}>
-            Open Snapshot
-          </button>
-        </div>
-      </section>
-
+    <main className="routeFrame routeFrame--workspace">
       {error ? <div className="inlineAlert inlineAlert--error">{error}</div> : null}
       {info ? <div className="inlineAlert inlineAlert--info">{info}</div> : null}
 
-      <section className="workspaceGrid">
-        <aside className="workspacePane workspacePane--rail">{leftRail}</aside>
+      <section className="workspaceShell">
+        <aside className="workspaceRail">{rail}</aside>
 
-        <section className="workspacePane">
-          {section === "stations" ? (
-            <>
-              <header className="paneHead">
-                <div>
-                  <h2>Station Roster</h2>
-                  <p>Live stations are pinned first, then sorted by creation date.</p>
-                </div>
-                <button className="uiButton uiButton--secondary" type="button" onClick={() => void refreshStations()} disabled={loadingStations}>
-                  {loadingStations ? "Refreshing" : "Refresh"}
-                </button>
-              </header>
-              <div className="paneBody">
-                {loadingStations ? <p className="loadingState">Loading stations...</p> : null}
-                {!loadingStations && stations.length === 0 ? (
-                  <p className="emptyState">No stations yet. Create your first station.</p>
-                ) : null}
+        <section className="workspaceMain">
+          <header className="workspaceHead">
+            <div>
+              <h1>Creator Workspace</h1>
+              <p>
+                Single-canvas operations flow for station management, media ingestion, and account administration.
+              </p>
+            </div>
+            <div className="workspaceHead__actions">
+              <button className="uiButton uiButton--accent" type="button" onClick={() => setCreateModalOpen(true)}>
+                New Station
+              </button>
+              <button className="uiButton uiButton--secondary" type="button" onClick={() => setUploadModalOpen(true)}>
+                Upload Media
+              </button>
+              <button className="uiButton uiButton--ghost mobileOnly" type="button" onClick={() => setRailOpen(true)}>
+                Open Navigation
+              </button>
+            </div>
+          </header>
 
-                {stations.length > 0 ? (
-                  <div className="dataTable">
-                    {stations.map((station) => (
-                      <article className="dataRow" key={station.summary.channel.id}>
-                        <div>
-                          <p className="dataRow__title">{station.summary.channel.name}</p>
-                          <p className="dataRow__meta">
-                            {station.summary.channel.description || "No description"} · {station.summary.playlistCount} queued
-                          </p>
-                        </div>
-                        <div className="dataRow__actions">
-                          <span className={`statusPill ${station.state?.isRunning ? "statusPill--live" : "statusPill--off"}`}>
-                            {station.state?.isRunning ? "Live" : "Off Air"}
-                          </span>
-                          <Link className="uiButton uiButton--secondary" to={`/stations/${station.summary.channel.id}`}>
-                            Manage
-                          </Link>
-                          <Link className="uiButton uiButton--secondary" to={`/stations/${station.summary.channel.id}/preview`}>
-                            Preview
-                          </Link>
-                        </div>
-                      </article>
-                    ))}
+          <section className="summaryStrip" aria-label="Workspace Metrics">
+            <article>
+              <h4>Stations</h4>
+              <p>{snapshot.stations}</p>
+            </article>
+            <article>
+              <h4>Live</h4>
+              <p>{snapshot.live}</p>
+            </article>
+            <article>
+              <h4>Programs</h4>
+              <p>{snapshot.libraryPrograms}</p>
+            </article>
+            <article>
+              <h4>Ads / Sponsors</h4>
+              <p>{snapshot.libraryAds}</p>
+            </article>
+          </section>
+
+          <section className="workspaceContent">
+            {section === "stations" ? (
+              <section className="workspaceSection">
+                <header className="workspaceSection__head">
+                  <div>
+                    <h2>Station Roster</h2>
+                    <p>Live channels are prioritized, then sorted by creation time.</p>
                   </div>
-                ) : null}
-              </div>
-            </>
-          ) : null}
-
-          {section === "library" ? (
-            <>
-              <header className="paneHead">
-                <div>
-                  <h2>Global Library</h2>
-                  <p>Wallet-level assets available for station import.</p>
-                </div>
-                <div className="pageBanner__actions">
-                  <button className="uiButton uiButton--accent" type="button" onClick={() => setUploadModalOpen(true)}>
-                    Upload
+                  <button className="uiButton uiButton--secondary" type="button" onClick={() => void refreshStations()} disabled={loadingStations}>
+                    {loadingStations ? "Refreshing" : "Refresh"}
                   </button>
-                  <button className="uiButton uiButton--secondary" type="button" onClick={() => void refreshLibrary()} disabled={loadingLibrary}>
-                    {loadingLibrary ? "Refreshing" : "Refresh"}
-                  </button>
-                </div>
-              </header>
-              <div className="paneBody">
-                {libraryAssets.length === 0 ? <p className="emptyState">No global library assets yet.</p> : null}
+                </header>
+                <div className="workspaceSection__body">
+                  {loadingStations ? <p className="loadingState">Loading stations...</p> : null}
+                  {!loadingStations && stations.length === 0 ? (
+                    <p className="emptyState">No stations yet. Create the first station to start your stream flow.</p>
+                  ) : null}
 
-                {libraryAssets.length > 0 ? (
-                  <div className="dataTable">
-                    {libraryAssets.map((asset) => (
-                      <article className="dataRow" key={asset.id}>
-                        <div>
-                          <p className="dataRow__title">{asset.title}</p>
-                          <p className="dataRow__meta">
-                            {asset.insertionCategory ?? asset.type} · {formatDateTime(asset.createdAt)}
-                          </p>
-                        </div>
-                        <div className="dataRow__actions">
-                          <span className="miniTag">{asset.mediaKind}</span>
-                          {asset.ipfsUrl ? (
-                            <a className="uiButton uiButton--secondary" href={asset.ipfsUrl} target="_blank" rel="noreferrer">
-                              IPFS
-                            </a>
-                          ) : null}
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </>
-          ) : null}
-
-          {section === "account" ? (
-            <>
-              <header className="paneHead">
-                <div>
-                  <h2>Account Controls</h2>
-                  <p>Session settings and identity details.</p>
-                </div>
-              </header>
-              <div className="paneBody">
-                <section className="stageSection">
-                  <div className="stageSection__head">
-                    <div>
-                      <h3>Connected Wallet</h3>
-                      <p>Primary creator identity for this workspace.</p>
+                  {stations.length > 0 ? (
+                    <div className="dataTable">
+                      {stations.map((station) => (
+                        <article className="dataRow" key={station.summary.channel.id}>
+                          <div>
+                            <p className="dataRow__title">{station.summary.channel.name}</p>
+                            <p className="dataRow__meta">
+                              {station.summary.channel.description || "No description"} · {station.summary.playlistCount} queued
+                            </p>
+                          </div>
+                          <div className="dataRow__actions">
+                            <span className={`statusPill ${station.state?.isRunning ? "statusPill--live" : "statusPill--off"}`}>
+                              {station.state?.isRunning ? "Live" : "Off Air"}
+                            </span>
+                            <Link className="uiButton uiButton--secondary" to={`/stations/${station.summary.channel.id}`}>
+                              Manage
+                            </Link>
+                            <Link className="uiButton uiButton--secondary" to={`/stations/${station.summary.channel.id}/preview`}>
+                              Preview
+                            </Link>
+                          </div>
+                        </article>
+                      ))}
                     </div>
+                  ) : null}
+                </div>
+              </section>
+            ) : null}
+
+            {section === "library" ? (
+              <section className="workspaceSection">
+                <header className="workspaceSection__head">
+                  <div>
+                    <h2>Global Media Library</h2>
+                    <p>Wallet-scoped assets ready for import across all stations.</p>
                   </div>
-                  <div className="stageSection__body">
-                    <p className="metaLine">{formatWalletAddress(ownerWallet)}</p>
-                    <button className="uiButton uiButton--danger" type="button" onClick={onDisconnectWallet}>
-                      Disconnect Wallet
+                  <div className="workspaceHead__actions">
+                    <button className="uiButton uiButton--accent" type="button" onClick={() => setUploadModalOpen(true)}>
+                      Upload
+                    </button>
+                    <button className="uiButton uiButton--secondary" type="button" onClick={() => void refreshLibrary()} disabled={loadingLibrary}>
+                      {loadingLibrary ? "Refreshing" : "Refresh"}
                     </button>
                   </div>
-                </section>
-              </div>
-            </>
-          ) : null}
-        </section>
+                </header>
+                <div className="workspaceSection__body">
+                  {libraryAssets.length === 0 ? <p className="emptyState">No assets uploaded yet.</p> : null}
 
-        <aside className="workspacePane workspacePane--rail">{rightRail}</aside>
+                  {libraryAssets.length > 0 ? (
+                    <div className="dataTable">
+                      {libraryAssets.map((asset) => (
+                        <article className="dataRow" key={asset.id}>
+                          <div>
+                            <p className="dataRow__title">{asset.title}</p>
+                            <p className="dataRow__meta">
+                              {asset.insertionCategory ?? asset.type} · {formatDateTime(asset.createdAt)}
+                            </p>
+                          </div>
+                          <div className="dataRow__actions">
+                            <span className="miniTag">{asset.mediaKind}</span>
+                            {asset.ipfsUrl ? (
+                              <a className="uiButton uiButton--secondary" href={asset.ipfsUrl} target="_blank" rel="noreferrer">
+                                IPFS
+                              </a>
+                            ) : null}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+            ) : null}
+
+            {section === "account" ? (
+              <section className="workspaceSection">
+                <header className="workspaceSection__head">
+                  <div>
+                    <h2>Account</h2>
+                    <p>Wallet identity and session controls.</p>
+                  </div>
+                </header>
+                <div className="workspaceSection__body">
+                  <p className="metaLine">Connected wallet: {ownerWallet}</p>
+                  <button className="uiButton uiButton--danger" type="button" onClick={onDisconnectWallet}>
+                    Disconnect Wallet
+                  </button>
+                </div>
+              </section>
+            ) : null}
+          </section>
+        </section>
       </section>
+
+      <OverlayPanel open={railOpen} onClose={() => setRailOpen(false)} title="Workspace Navigation" mode="left">
+        {rail}
+      </OverlayPanel>
 
       <OverlayPanel open={createModalOpen} onClose={() => setCreateModalOpen(false)} title="Create Station" mode="center">
         <form className="fieldGrid" onSubmit={(event) => void onCreateStation(event)}>
@@ -559,12 +517,7 @@ export default function CreatorDashboardPage() {
           </label>
           <label className="field">
             <span>Optional Title</span>
-            <input
-              className="uiInput"
-              value={libraryTitle}
-              onChange={(event) => setLibraryTitle(event.target.value)}
-              disabled={uploadingLibrary}
-            />
+            <input className="uiInput" value={libraryTitle} onChange={(event) => setLibraryTitle(event.target.value)} disabled={uploadingLibrary} />
           </label>
           <label className="field">
             <span>Insertion Category</span>
@@ -614,14 +567,6 @@ export default function CreatorDashboardPage() {
             </button>
           </div>
         </form>
-      </OverlayPanel>
-
-      <OverlayPanel open={leftDrawerOpen} onClose={() => setLeftDrawerOpen(false)} title="Workspace Navigation" mode="left">
-        {leftRail}
-      </OverlayPanel>
-
-      <OverlayPanel open={rightDrawerOpen} onClose={() => setRightDrawerOpen(false)} title="Account Snapshot" mode="right">
-        {rightRail}
       </OverlayPanel>
     </main>
   );

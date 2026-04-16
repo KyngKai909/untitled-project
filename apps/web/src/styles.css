@@ -182,7 +182,7 @@ select {
 .routeFrame {
   width: min(1520px, 100%);
   margin: 0 auto;
-  padding: 1rem;
+  padding: 1.15rem;
   display: grid;
   gap: 0;
 }
@@ -383,10 +383,18 @@ a.uiButton {
   gap: 1rem;
   align-content: start;
   overflow: auto;
+  line-height: 1.5;
 }
 
 .paneBody--dense {
   gap: 0.72rem;
+}
+
+.paneBody > .stageSection + .stageSection,
+.paneBody > .dataTable + .stageSection,
+.paneBody > .stageSection + .dataTable,
+.paneBody > .dataTable + .dataTable {
+  margin-top: -1px;
 }
 
 .navStack {
@@ -755,6 +763,276 @@ a.uiButton {
   display: none;
 }
 
+.routeFrame--workspace {
+  padding: 0;
+}
+
+.workspaceShell {
+  border-left: 1px solid var(--line-strong);
+  border-right: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  min-height: calc(100vh - 72px);
+  background: var(--bg);
+}
+
+.workspaceShell--manager {
+  grid-template-columns: 320px minmax(0, 1fr);
+}
+
+.workspaceRail {
+  border-right: 1px solid var(--line);
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  height: 100%;
+}
+
+.railBlock {
+  border-bottom: 1px solid var(--line);
+  padding: 1rem;
+  display: grid;
+  gap: 0.78rem;
+}
+
+.railBlock__head h3 {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.railBlock__head p {
+  margin: 0.36rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.railNav {
+  display: grid;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.railNav button {
+  min-height: 44px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 0.64rem 0.74rem;
+  text-align: left;
+  background: transparent;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.railNav button:last-child {
+  border-bottom: 0;
+}
+
+.railNav button[data-active="true"] {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.workspaceMain {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+}
+
+.workspaceMain--manager {
+  grid-template-rows: auto auto 1fr;
+}
+
+.workspaceHead {
+  border-bottom: 1px solid var(--line);
+  padding: 1rem 1.1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.9rem;
+}
+
+.workspaceHead h1 {
+  margin: 0;
+  font-size: clamp(1.34rem, 2.5vw, 2rem);
+  line-height: 1.1;
+}
+
+.workspaceHead p {
+  margin: 0.45rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.94rem;
+  max-width: 88ch;
+}
+
+.workspaceHead__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.52rem;
+}
+
+.summaryStrip {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.summaryStrip article {
+  border-right: 1px solid var(--line);
+  padding: 0.88rem 0.96rem;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.summaryStrip article:last-child {
+  border-right: 0;
+}
+
+.summaryStrip h4 {
+  margin: 0;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.summaryStrip p {
+  margin: 0.42rem 0 0;
+  font-size: 1.58rem;
+  font-weight: 700;
+}
+
+.workspaceContent {
+  min-width: 0;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+}
+
+.workspaceSection {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+}
+
+.workspaceSection:last-child {
+  border-bottom: 0;
+}
+
+.workspaceSection__head {
+  border-bottom: 1px solid var(--line);
+  padding: 0.9rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+.workspaceSection__head h2,
+.workspaceSection__head h3 {
+  margin: 0;
+  font-size: 1.04rem;
+}
+
+.workspaceSection__head p {
+  margin: 0.4rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.workspaceSection__body {
+  padding: 1rem;
+  display: grid;
+  gap: 0.95rem;
+}
+
+.managerTabs {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.managerTabs button {
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  min-height: 46px;
+  padding: 0.65rem 0.72rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.managerTabs button:last-child {
+  border-right: 0;
+}
+
+.managerTabs button[data-active="true"] {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.managerSplit {
+  border: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.managerSplit__pane {
+  border-right: 1px solid var(--line);
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.managerSplit__pane:last-child {
+  border-right: 0;
+}
+
+.managerSplit__head {
+  border-bottom: 1px solid var(--line);
+  padding: 0.78rem 0.86rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.managerSplit__head h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.managerSplit__head p {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.managerSplit__body {
+  padding: 0.86rem;
+  display: grid;
+  gap: 0.76rem;
+  align-content: start;
+}
+
+.stackActions {
+  display: grid;
+  gap: 0.52rem;
+}
+
+.wrapAnywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 @keyframes riseIn {
   from {
     opacity: 0;
@@ -792,6 +1070,41 @@ a.uiButton {
   .mobileOnly {
     display: inline-flex;
   }
+
+  .workspaceShell,
+  .workspaceShell--manager {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .workspaceRail {
+    display: none;
+  }
+
+  .summaryStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summaryStrip article:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .summaryStrip article:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .managerSplit {
+    grid-template-columns: 1fr;
+  }
+
+  .managerSplit__pane {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .managerSplit__pane:last-child {
+    border-bottom: 0;
+  }
 }
 
 @media (max-width: 920px) {
@@ -813,7 +1126,11 @@ a.uiButton {
   }
 
   .routeFrame {
-    padding: 0.7rem;
+    padding: 0.75rem;
+  }
+
+  .routeFrame--workspace {
+    padding: 0;
   }
 
   .dataRow {
@@ -826,5 +1143,33 @@ a.uiButton {
 
   .inputGridTwo {
     grid-template-columns: 1fr;
+  }
+
+  .workspaceHead {
+    padding: 0.86rem 0.9rem;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .workspaceHead__actions {
+    justify-content: flex-start;
+  }
+
+  .workspaceSection__head,
+  .workspaceSection__body {
+    padding-left: 0.9rem;
+    padding-right: 0.9rem;
+  }
+
+  .managerTabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .managerTabs button:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .managerTabs button:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
   }
 }
