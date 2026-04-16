@@ -108,30 +108,69 @@ Use `.env.example` as baseline. Important keys:
 8. Click **Go Live**.
 9. Open station preview and verify HLS playback.
 
-## Railway deployment (single frontend URL)
+## Railway deployment modes
 
-This repo is configured for a single Railway service that exposes one frontend URL and runs:
-- API (serves `/api`, `/hls`, `/uploads`)
-- Worker (playout loop)
-- Built web app (served by API from `apps/web/dist`)
+### Split services (recommended)
 
-### Deploy
+Use three app services:
+- `@openchannel/web`: creator frontend
+- `@openchannel/api`: API + upload/compression + Livepeer control
+- `@openchannel/worker`: playout scheduler/loop worker
+
+This keeps deploys and scaling independent and is the correct base for future consumer app, external APIs, and SDK work.
+
+#### One-time service configuration (Railway CLI)
 
 ```bash
-railway login --browserless
-railway link
-railway up
+# API service
+railway variables --service @openchannel/api --environment production \
+  --set 'RAILPACK_BUILD_CMD=npm run build:service:api' \
+  --set 'RAILPACK_START_CMD=npm run start:service:api' \
+  --set 'SERVE_WEB_APP=false'
+
+# Worker service
+railway variables --service @openchannel/worker --environment production \
+  --set 'RAILPACK_BUILD_CMD=npm run build:service:worker' \
+  --set 'RAILPACK_START_CMD=npm run start:service:worker'
+
+# Web service
+railway variables --service @openchannel/web --environment production \
+  --set 'RAILPACK_BUILD_CMD=npm run build:service:web' \
+  --set 'RAILPACK_START_CMD=npm run start:service:web'
 ```
 
-### Required Railway variables
+#### Required runtime variables
 
-- `WEB_ORIGIN=*` (or your Railway app URL)
-- `STORAGE_ROOT=/data/storage` (recommended)
-- `DATABASE_URL=<Railway Postgres connection string>` (recommended for production)
-- `LIVEPEER_API_KEY` (optional but required for Livepeer provisioning)
-- `PINATA_JWT` (optional for IPFS pinning)
+- `@openchannel/api`: `DATABASE_URL`, `STORAGE_ROOT=/data/storage`, `WEB_ORIGIN=<web-service-url>`, `LIVEPEER_API_KEY` (optional), `PINATA_JWT` (optional)
+- `@openchannel/worker`: `DATABASE_URL`, `STORAGE_ROOT=/data/storage`, `WORKER_POLL_INTERVAL_MS` (optional)
+- `@openchannel/web`: `VITE_API_BASE=<api-service-url>`
 
-### Railway runtime notes
+#### Domains
 
-- Attach a persistent volume mounted at `/data` if you want uploads/HLS artifacts to persist across deploys.
-- Keep service replica count at `1` for the single-worker playout loop.
+Generate one Railway domain for each internet-facing service:
+
+```bash
+railway domain --service @openchannel/api
+railway domain --service @openchannel/web
+```
+
+Then set:
+- `WEB_ORIGIN` on API to your web domain
+- `VITE_API_BASE` on Web to your API domain
+
+#### Deploy
+
+```bash
+railway up --service @openchannel/api --environment production --detach
+railway up --service @openchannel/worker --environment production --detach
+railway up --service @openchannel/web --environment production --detach
+```
+
+#### Notes
+
+- Attach persistent volume(s) to API/worker if you depend on local media files (`STORAGE_ROOT=/data/storage`).
+- Keep worker replica count at `1` unless you add explicit leader election/queue partitioning.
+
+### Single service (legacy)
+
+`opencast-core` runs API + worker + web in one service. Keep this only for quick demos.

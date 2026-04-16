@@ -94,7 +94,7 @@ const checks = [
     key: "VITE_API_BASE",
     scope: "web",
     required: false,
-    note: "Leave blank for same-origin API when frontend is served by API."
+    note: "Set to API URL for split-service deploys; leave blank for same-origin single-service deploys."
   }
 ];
 
