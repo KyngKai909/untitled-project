@@ -25,10 +25,12 @@ import type {
 } from "@openchannel/shared";
 import {
   API_PORT,
+  DELETE_LOCAL_AFTER_IPFS,
   HLS_ROOT,
   KEEP_ORIGINAL_UPLOADS,
   LIVEPEER_DEFAULT_ENABLED,
   MAX_COMPRESSION_INPUT_BYTES,
+  UPLOAD_STORAGE_MODE,
   UPLOAD_ROOT,
   WEB_DIST_DIR,
   WEB_ORIGIN
@@ -222,6 +224,27 @@ function normalizeWalletAddress(value: unknown): string | undefined {
 
 function formatMiB(valueBytes: number): string {
   return `${Math.round(valueBytes / (1024 * 1024))}MB`;
+}
+
+function isHttpUrl(value: string | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+  return /^https?:\/\//i.test(value);
+}
+
+async function removeLocalFiles(paths: Array<string | undefined>): Promise<void> {
+  const unique = new Set<string>();
+  for (const candidate of paths) {
+    if (!candidate || isHttpUrl(candidate)) {
+      continue;
+    }
+    unique.add(candidate);
+  }
+
+  for (const filePath of unique) {
+    await fs.unlink(filePath).catch(() => undefined);
+  }
 }
 
 function normalizeBackgroundUploadPath(value: unknown): string | undefined {
@@ -1415,21 +1438,39 @@ app.post("/api/library/assets/upload", upload.single("file"), async (req, res) =
   const type = normalizeAssetType(req.body?.type);
   const insertionCategory = normalizeInsertionCategory(req.body?.insertionCategory, type);
 
+  const pinataConfigured = hasPinataJwt();
+  if (UPLOAD_STORAGE_MODE === "ipfs" && !pinataConfigured) {
+    await removeLocalFiles([streamReadyPath, uploadedPath, originalLocalPath]);
+    return sendError(res, 503, "IPFS-only storage mode requires PINATA_JWT to be configured.");
+  }
+
   let ipfsCid: string | undefined;
   let ipfsUrl: string | undefined;
-  let storageProvider: "local" | "ipfs" = "local";
   let ipfsWarning: string | undefined;
-
-  if (hasPinataJwt()) {
+  if (pinataConfigured && UPLOAD_STORAGE_MODE !== "local") {
     try {
       const pin = await uploadFileToIpfs(streamReadyPath, title);
       ipfsCid = pin.cid;
       ipfsUrl = pin.url;
-      storageProvider = "ipfs";
     } catch (error) {
       ipfsWarning = error instanceof Error ? error.message : "IPFS upload failed.";
     }
+  } else if (UPLOAD_STORAGE_MODE !== "local" && !pinataConfigured) {
+    ipfsWarning = "PINATA_JWT is not configured; falling back to local storage.";
   }
+
+  if (UPLOAD_STORAGE_MODE === "ipfs" && !ipfsUrl) {
+    await removeLocalFiles([streamReadyPath, uploadedPath, originalLocalPath]);
+    return sendError(res, 502, `IPFS pinning failed in ipfs mode. ${ipfsWarning ?? "Unknown pinning error."}`);
+  }
+
+  if (ipfsUrl && DELETE_LOCAL_AFTER_IPFS) {
+    await removeLocalFiles([streamReadyPath, uploadedPath, originalLocalPath]);
+    originalLocalPath = undefined;
+  }
+
+  const storageProvider: "local" | "ipfs" = ipfsUrl ? "ipfs" : "local";
+  const playbackSourcePath = ipfsUrl ?? streamReadyPath;
 
   const payload = await transaction((editable) => {
     const asset: Asset = {
@@ -1437,7 +1478,7 @@ app.post("/api/library/assets/upload", upload.single("file"), async (req, res) =
       channelId: libraryScopeId,
       title,
       sourceType: "upload",
-      localPath: streamReadyPath,
+      localPath: playbackSourcePath,
       originalLocalPath,
       storageProvider,
       ipfsCid,
@@ -1520,21 +1561,39 @@ app.post("/api/channels/:channelId/assets/upload", upload.single("file"), async 
   if (folderId && !db.assetFolders.some((folder) => folder.id === folderId && folder.channelId === channel.id)) {
     return sendError(res, 400, "folderId does not belong to this channel.");
   }
+  const pinataConfigured = hasPinataJwt();
+  if (UPLOAD_STORAGE_MODE === "ipfs" && !pinataConfigured) {
+    await removeLocalFiles([streamReadyPath, uploadedPath, originalLocalPath]);
+    return sendError(res, 503, "IPFS-only storage mode requires PINATA_JWT to be configured.");
+  }
+
   let ipfsCid: string | undefined;
   let ipfsUrl: string | undefined;
-  let storageProvider: "local" | "ipfs" = "local";
   let ipfsWarning: string | undefined;
-
-  if (hasPinataJwt()) {
+  if (pinataConfigured && UPLOAD_STORAGE_MODE !== "local") {
     try {
       const pin = await uploadFileToIpfs(streamReadyPath, title);
       ipfsCid = pin.cid;
       ipfsUrl = pin.url;
-      storageProvider = "ipfs";
     } catch (error) {
       ipfsWarning = error instanceof Error ? error.message : "IPFS upload failed.";
     }
+  } else if (UPLOAD_STORAGE_MODE !== "local" && !pinataConfigured) {
+    ipfsWarning = "PINATA_JWT is not configured; falling back to local storage.";
   }
+
+  if (UPLOAD_STORAGE_MODE === "ipfs" && !ipfsUrl) {
+    await removeLocalFiles([streamReadyPath, uploadedPath, originalLocalPath]);
+    return sendError(res, 502, `IPFS pinning failed in ipfs mode. ${ipfsWarning ?? "Unknown pinning error."}`);
+  }
+
+  if (ipfsUrl && DELETE_LOCAL_AFTER_IPFS) {
+    await removeLocalFiles([streamReadyPath, uploadedPath, originalLocalPath]);
+    originalLocalPath = undefined;
+  }
+
+  const storageProvider: "local" | "ipfs" = ipfsUrl ? "ipfs" : "local";
+  const playbackSourcePath = ipfsUrl ?? streamReadyPath;
 
   const payload = await transaction((editable) => {
     const asset: Asset = {
@@ -1542,7 +1601,7 @@ app.post("/api/channels/:channelId/assets/upload", upload.single("file"), async 
       channelId: channel.id,
       title,
       sourceType: "upload",
-      localPath: streamReadyPath,
+      localPath: playbackSourcePath,
       originalLocalPath,
       folderId,
       storageProvider,

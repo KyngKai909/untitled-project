@@ -38,7 +38,8 @@ Out of scope for this core pass:
 - API runs FFmpeg compression to stream-ready formats:
   - video: H.264 + AAC (MP4)
   - audio: AAC (M4A)
-- Compressed artifact becomes the active playout source (`asset.localPath`)
+- In `UPLOAD_STORAGE_MODE=ipfs`, compressed artifacts are pinned to IPFS (Pinata), `asset.localPath` is set to the IPFS gateway URL, and local files are deleted when `DELETE_LOCAL_AFTER_IPFS=true`.
+- In `UPLOAD_STORAGE_MODE=hybrid`, local storage remains the fallback when IPFS pinning fails.
 - Worker decodes that source and repackages to rolling HLS segments for playback
 
 This gives a practical compress/decompress flow using free open-source FFmpeg.
@@ -93,7 +94,9 @@ Use `.env.example` as baseline. Important keys:
 
 - `DATABASE_URL` (recommended; enables PostgreSQL-backed shared state)
 - `LIVEPEER_API_KEY` (for provisioning and using Livepeer playback)
-- `PINATA_JWT` (for IPFS pinning)
+- `PINATA_JWT` (required for `UPLOAD_STORAGE_MODE=ipfs`)
+- `UPLOAD_STORAGE_MODE` (`local` | `hybrid` | `ipfs`)
+- `DELETE_LOCAL_AFTER_IPFS` (`true`/`false`; default `true`)
 - `STORAGE_ROOT` (optional, defaults to `./storage`)
 
 ## Core test flow
@@ -144,7 +147,7 @@ railway variables --service @openchannel/web --environment production \
 
 #### Required runtime variables
 
-- `@openchannel/api`: `DATABASE_URL`, `STORAGE_ROOT=/data/storage`, `WEB_ORIGIN=<web-service-url>`, `LIVEPEER_API_KEY` (optional), `PINATA_JWT` (optional)
+- `@openchannel/api`: `DATABASE_URL`, `STORAGE_ROOT=/data/storage`, `WEB_ORIGIN=<web-service-url>`, `UPLOAD_STORAGE_MODE=ipfs` (recommended), `DELETE_LOCAL_AFTER_IPFS=true`, `PINATA_JWT`, `LIVEPEER_API_KEY` (optional)
 - `@openchannel/worker`: `DATABASE_URL`, `STORAGE_ROOT=/data/storage`, `MEDIA_BASE_URL=<api-service-url>`, `WORKER_POLL_INTERVAL_MS` (optional)
 - `@openchannel/web`: `API_PROXY_BASE_URL=<api-service-url>` (recommended), `VITE_API_BASE=<api-service-url>` (optional build-time override)
 
@@ -171,7 +174,7 @@ railway up --service @openchannel/web --environment production --detach
 
 #### Notes
 
-- Attach persistent volume(s) to API/worker if you depend on local media files (`STORAGE_ROOT=/data/storage`).
+- Attach persistent volume(s) to API/worker if you depend on local media files (`STORAGE_ROOT=/data/storage`). In IPFS-only mode this mainly covers transient processing/HLS output.
 - Keep worker replica count at `1` unless you add explicit leader election/queue partitioning.
 
 ### Single service (legacy)

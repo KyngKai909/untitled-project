@@ -85,6 +85,18 @@ const checks = [
     note: "Required only for Livepeer provisioning and RTMP output."
   },
   {
+    key: "UPLOAD_STORAGE_MODE",
+    scope: "root",
+    required: false,
+    note: "local | hybrid | ipfs. Use ipfs to require Pinata upload before saving asset metadata."
+  },
+  {
+    key: "DELETE_LOCAL_AFTER_IPFS",
+    scope: "root",
+    required: false,
+    note: "When true, removes local media files after successful IPFS pin."
+  },
+  {
     key: "PINATA_JWT",
     scope: "root",
     required: false,

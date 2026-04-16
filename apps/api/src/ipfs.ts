@@ -1,4 +1,5 @@
-import { promises as fs } from "node:fs";
+import fs from "node:fs";
+import { promises as fsPromises } from "node:fs";
 import path from "node:path";
 import { PINATA_GATEWAY_BASE, PINATA_JWT, PINATA_NETWORK, PINATA_UPLOAD_URL } from "./config.js";
 
@@ -24,13 +25,13 @@ export async function uploadFileToIpfs(filePath: string, name: string): Promise<
     throw new Error("PINATA_JWT is not configured.");
   }
 
-  const buffer = await fs.readFile(filePath);
   const fileName = path.basename(filePath);
+  const fileBlob = await openFileBlob(filePath);
   const form = new FormData();
 
   form.set("network", PINATA_NETWORK);
   form.set("name", name || fileName);
-  form.set("file", new Blob([buffer]), fileName);
+  form.set("file", fileBlob, fileName);
 
   const response = await fetch(PINATA_UPLOAD_URL, {
     method: "POST",
@@ -54,4 +55,17 @@ export async function uploadFileToIpfs(filePath: string, name: string): Promise<
   const url = gatewayBase.endsWith("/ipfs") ? `${gatewayBase}/${cid}` : `${gatewayBase}/ipfs/${cid}`;
 
   return { cid, url };
+}
+
+async function openFileBlob(filePath: string): Promise<Blob> {
+  const fsWithBlob = fs as typeof fs & {
+    openAsBlob?: (path: string, options?: { type?: string }) => Promise<Blob>;
+  };
+
+  if (typeof fsWithBlob.openAsBlob === "function") {
+    return fsWithBlob.openAsBlob(filePath);
+  }
+
+  const buffer = await fsPromises.readFile(filePath);
+  return new Blob([buffer]);
 }

@@ -21,6 +21,8 @@ export const MAX_COMPRESSION_INPUT_BYTES = parsePositiveIntEnv(
   process.env.MAX_COMPRESSION_INPUT_BYTES,
   1024 * 1024 * 1024
 );
+export const UPLOAD_STORAGE_MODE = normalizeUploadStorageMode(process.env.UPLOAD_STORAGE_MODE);
+export const DELETE_LOCAL_AFTER_IPFS = String(process.env.DELETE_LOCAL_AFTER_IPFS ?? "true") !== "false";
 
 export const LIVEPEER_API_KEY = process.env.LIVEPEER_API_KEY ?? "";
 export const LIVEPEER_API_BASE = process.env.LIVEPEER_API_BASE ?? "https://livepeer.studio/api";
@@ -111,4 +113,12 @@ function parsePositiveIntEnv(value: string | undefined, fallback: number): numbe
     return fallback;
   }
   return Math.floor(parsed);
+}
+
+function normalizeUploadStorageMode(value: string | undefined): "local" | "hybrid" | "ipfs" {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === "local" || normalized === "ipfs") {
+    return normalized;
+  }
+  return "hybrid";
 }
