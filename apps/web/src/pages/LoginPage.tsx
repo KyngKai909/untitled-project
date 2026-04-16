@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { connectWallet, disconnectWallet, formatWalletAddress, getStoredWalletAddress } from "../wallet";
 
 export default function LoginPage() {
@@ -31,56 +29,97 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-[calc(100vh-56px)] w-full max-w-7xl items-center px-4 py-8">
-      <div className="grid w-full gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Creator Login</CardTitle>
-            <CardDescription>
-              Connect your wallet to open the creator dashboard. Your wallet is used as the owner identity.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {error ? (
-              <div className="rounded-md border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-300">
-                {error}
-              </div>
-            ) : null}
+    <main className="page">
+      <section className="pageHero">
+        <div className="pageHero__meta">
+          <span className="microTag" data-tone="accent">
+            Creator Access
+          </span>
+          <span className="microTag">Wallet-gated dashboard</span>
+        </div>
+        <h1>Run your channel operations from one control surface.</h1>
+        <p>
+          Connect your wallet to manage global media library, station orchestration, runtime schedules, and live playout.
+          The interface is designed for daily operations, not demos.
+        </p>
+        <div className="pageHero__actions">
+          <button className="button" type="button" onClick={() => void onConnectWallet()} disabled={connecting || Boolean(wallet)}>
+            {connecting ? "Connecting" : wallet ? "Wallet Connected" : "Connect Wallet"}
+          </button>
+          <button className="button" data-variant="secondary" type="button" onClick={() => navigate("/dashboard")}>
+            Open Dashboard
+          </button>
+        </div>
+      </section>
+
+      {error ? (
+        <div className="alert" data-tone="error">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="grid2">
+        <section className="section">
+          <header className="section__head">
+            <div>
+              <h2>Access State</h2>
+              <p>Session is tied to your wallet address. Disconnect at any time.</p>
+            </div>
+          </header>
+          <div className="section__body">
             {wallet ? (
-              <div className="space-y-3">
-                <p className="text-sm text-slate-300">
-                  Connected wallet: <span className="font-medium text-white">{formatWalletAddress(wallet)}</span>
+              <>
+                <p className="metaLine">
+                  <span className="badge" data-tone="live">
+                    Authorized
+                  </span>
+                  <span>{formatWalletAddress(wallet)}</span>
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button onClick={() => navigate("/dashboard")}>Continue to Dashboard</Button>
-                  <Button variant="outline" onClick={onDisconnectWallet}>
+                <div className="pageHero__actions">
+                  <button className="button" data-variant="accent" type="button" onClick={() => navigate("/dashboard")}>
+                    Continue to Dashboard
+                  </button>
+                  <button className="button" data-variant="danger" type="button" onClick={onDisconnectWallet}>
                     Disconnect
-                  </Button>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="empty">No wallet connected. Use the primary action above to authenticate.</p>
+            )}
+          </div>
+        </section>
+
+        <section className="section">
+          <header className="section__head">
+            <div>
+              <h2>Operating Flow</h2>
+              <p>Core production workflow for creators and ops teams.</p>
+            </div>
+          </header>
+          <div className="section__body">
+            <div className="list">
+              <div className="row">
+                <div>
+                  <p className="row__title">1. Build global media library</p>
+                  <p className="row__meta">Upload once and reuse across multiple stations.</p>
                 </div>
               </div>
-            ) : (
-              <Button onClick={() => void onConnectWallet()} disabled={connecting}>
-                {connecting ? "Connecting..." : "Connect Wallet"}
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Core Workflow</CardTitle>
-            <CardDescription>OpenCast now focuses on the creator core flow.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-300">
-              <li>Upload into your global creator library.</li>
-              <li>Create and configure stations.</li>
-              <li>Build and reorder station playlists.</li>
-              <li>Schedule runtime windows or run 24/7.</li>
-              <li>Go live via Livepeer output.</li>
-            </ol>
-          </CardContent>
-        </Card>
+              <div className="row">
+                <div>
+                  <p className="row__title">2. Configure stations</p>
+                  <p className="row__meta">Set stream mode, queue logic, ad injection rules, and branding metadata.</p>
+                </div>
+              </div>
+              <div className="row">
+                <div>
+                  <p className="row__title">3. Control runtime and live state</p>
+                  <p className="row__meta">Schedule windows, go live instantly, and monitor now/next timeline.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   );

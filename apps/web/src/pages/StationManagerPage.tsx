@@ -16,12 +16,6 @@ import {
   setLivepeerEnabled
 } from "../api";
 import HlsPlayer from "../components/HlsPlayer";
-import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Input } from "../components/ui/input";
-import { Progress } from "../components/ui/progress";
-import { Textarea } from "../components/ui/textarea";
 import type { Asset, ChannelDetail, StreamMode } from "../types";
 import { getStoredWalletAddress } from "../wallet";
 
@@ -244,6 +238,7 @@ export default function StationManagerPage() {
     }
     return resolveStreamUrl(channelId, detail);
   }, [channelId, detail]);
+
   const livepeerEmbedUrl = useMemo(
     () => toLivepeerEmbedUrl(detail?.livepeer?.enabled ? detail.livepeer.playbackId : undefined),
     [detail]
@@ -619,364 +614,531 @@ export default function StationManagerPage() {
 
   if (!channelId) {
     return (
-      <main className="mx-auto w-full max-w-7xl px-4 py-6">
-        <div className="rounded-md border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-300">Channel id is missing.</div>
+      <main className="page">
+        <div className="alert" data-tone="error">Channel id is missing.</div>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl space-y-4 px-4 py-6">
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-slate-400">Station Manager</p>
-            <CardTitle>{detail?.channel.name ?? "Loading..."}</CardTitle>
-            <CardDescription>
-              Import from global library, structure playlists, schedule windows, and control live output.
-            </CardDescription>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link to="/dashboard">Back to Dashboard</Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to={`/stations/${channelId}/preview`}>Open Preview</Link>
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {detail ? (
-            <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
-              <Badge variant={detail.state.isRunning ? "default" : "secondary"}>
-                {detail.state.isRunning ? "LIVE" : "OFF AIR"}
-              </Badge>
-              {timeline.current ? <span>Now: {timeline.current.title}</span> : <span>Waiting for next item</span>}
-              {timeline.remainingSec !== undefined ? <span>Remaining {formatDuration(timeline.remainingSec)}</span> : null}
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+    <main className="page">
+      <section className="pageHero">
+        <div className="pageHero__meta">
+          <span className="microTag" data-tone="accent">Station Manager</span>
+          <span className="microTag">ID {channelId.slice(0, 8)}</span>
+        </div>
+        <h1>{detail?.channel.name ?? "Loading station"}</h1>
+        <p>Control playlists, schedules, ad logic, and output routing from one production console.</p>
+        <div className="pageHero__actions">
+          <Link className="button" data-variant="secondary" to="/dashboard">Back to Dashboard</Link>
+          <Link className="button" data-variant="secondary" to={`/stations/${channelId}/preview`}>Open Preview</Link>
+        </div>
+        {detail ? (
+          <p className="metaLine">
+            <span className="badge" data-tone={detail.state.isRunning ? "live" : "off"}>
+              {detail.state.isRunning ? "Live" : "Off Air"}
+            </span>
+            {timeline.current ? <span>Now: {timeline.current.title}</span> : <span>Waiting for next item</span>}
+            {timeline.remainingSec !== undefined ? <span>Remaining {formatDuration(timeline.remainingSec)}</span> : null}
+          </p>
+        ) : null}
+      </section>
 
       {error ? (
-        <div className="rounded-md border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-300">{error}</div>
+        <div className="alert" data-tone="error">
+          {error}
+        </div>
       ) : null}
       {info ? (
-        <div className="rounded-md border border-cyan-500/40 bg-cyan-500/10 p-3 text-sm text-cyan-200">{info}</div>
+        <div className="alert" data-tone="info">
+          {info}
+        </div>
       ) : null}
 
       {loading || !detail ? (
-        <Card><CardContent className="pt-5 text-sm text-slate-400">Loading station...</CardContent></Card>
+        <section className="section">
+          <div className="section__body">
+            <p className="loading">Loading station...</p>
+          </div>
+        </section>
       ) : (
         <>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Station Profile</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Input value={name} onChange={(event) => setName(event.target.value)} disabled={busy} />
-                <Textarea value={description} onChange={(event) => setDescription(event.target.value)} disabled={busy} />
-                <select
-                  className="h-10 w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100"
-                  value={streamMode}
-                  onChange={(event) => setStreamMode(event.target.value === "radio" ? "radio" : "video")}
-                  disabled={busy}
-                >
-                  <option value="video">Video</option>
-                  <option value="radio">Radio</option>
-                </select>
-                <Button onClick={() => void onSaveStationProfile()} disabled={busy}>Save Station</Button>
-              </CardContent>
-            </Card>
+          <div className="grid2">
+            <section className="section">
+              <header className="section__head">
+                <div>
+                  <h2>Station Profile</h2>
+                  <p>Metadata and stream mode settings for this station.</p>
+                </div>
+              </header>
+              <div className="section__body">
+                <label className="field">
+                  <span>Station Name</span>
+                  <input value={name} onChange={(event) => setName(event.target.value)} disabled={busy} />
+                </label>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Live Output</CardTitle>
-                <CardDescription className="break-all">{streamUrl || "No stream URL yet"}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  <Button onClick={() => void onProvisionLivepeer()} disabled={busy}>Provision Livepeer</Button>
-                  <Button variant="outline" onClick={() => void onToggleLivepeer(!(detail.livepeer?.enabled ?? false))} disabled={busy}>
+                <label className="field">
+                  <span>Description</span>
+                  <textarea value={description} onChange={(event) => setDescription(event.target.value)} disabled={busy} />
+                </label>
+
+                <label className="field">
+                  <span>Stream Mode</span>
+                  <select
+                    value={streamMode}
+                    onChange={(event) => setStreamMode(event.target.value === "radio" ? "radio" : "video")}
+                    disabled={busy}
+                  >
+                    <option value="video">Video</option>
+                    <option value="radio">Radio</option>
+                  </select>
+                </label>
+
+                <div className="pageHero__actions">
+                  <button className="button" data-variant="accent" onClick={() => void onSaveStationProfile()} disabled={busy}>
+                    Save Station
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section className="section">
+              <header className="section__head">
+                <div>
+                  <h2>Live Output</h2>
+                  <p>{streamUrl || "No stream URL yet"}</p>
+                </div>
+              </header>
+              <div className="section__body">
+                <div className="pageHero__actions">
+                  <button className="button" data-variant="secondary" onClick={() => void onProvisionLivepeer()} disabled={busy}>
+                    Provision Livepeer
+                  </button>
+                  <button
+                    className="button"
+                    data-variant="secondary"
+                    onClick={() => void onToggleLivepeer(!(detail.livepeer?.enabled ?? false))}
+                    disabled={busy}
+                  >
                     {detail.livepeer?.enabled ? "Disable Livepeer" : "Enable Livepeer"}
-                  </Button>
+                  </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button onClick={() => void onControl("start")} disabled={busy}>Go Live</Button>
-                  <Button variant="outline" onClick={() => void onControl("previous")} disabled={busy}>Previous</Button>
-                  <Button variant="outline" onClick={() => void onControl("skip")} disabled={busy}>Skip Next</Button>
-                  <Button variant="outline" onClick={() => void onControl("stop")} disabled={busy}>Stop</Button>
+
+                <div className="pageHero__actions">
+                  <button className="button" data-variant="accent" onClick={() => void onControl("start")} disabled={busy}>Go Live</button>
+                  <button className="button" data-variant="secondary" onClick={() => void onControl("previous")} disabled={busy}>Previous</button>
+                  <button className="button" data-variant="secondary" onClick={() => void onControl("skip")} disabled={busy}>Skip</button>
+                  <button className="button" data-variant="danger" onClick={() => void onControl("stop")} disabled={busy}>Stop</button>
                 </div>
+
                 {livepeerEmbedUrl ? (
-                  <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/60 p-2">
+                  <div className="mediaFrame">
                     <iframe
                       src={livepeerEmbedUrl}
                       title="Livepeer Player"
                       allow="autoplay; fullscreen; picture-in-picture"
-                      className="aspect-video w-full rounded-md bg-black"
                     />
                   </div>
                 ) : streamUrl ? (
                   <HlsPlayer src={streamUrl} muted />
-                ) : null}
-              </CardContent>
-            </Card>
+                ) : (
+                  <p className="empty">Stream URL not available.</p>
+                )}
+              </div>
+            </section>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Playlist Timeline</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+          <div className="grid2">
+            <section className="section">
+              <header className="section__head">
                 <div>
-                  <p className="mb-1 text-xs uppercase tracking-wide text-slate-400">Previously Played</p>
-                  {timeline.previous.length === 0 ? <p className="text-sm text-slate-500">No history yet.</p> : null}
-                  <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-300">
-                    {timeline.previous.map((asset, index) => (
-                      <li key={`${asset.id}-prev-${index}`}>{asset.title}</li>
-                    ))}
-                  </ol>
+                  <h2>Playlist Timeline</h2>
+                  <p>Previous, current, and upcoming items from active playout state.</p>
                 </div>
+              </header>
+              <div className="section__body">
+                <div className="timelineRail">
+                  <div className="timelineRail__group">
+                    <h4>Previously Played</h4>
+                    {timeline.previous.length === 0 ? <p className="empty">No history yet.</p> : null}
+                    {timeline.previous.length > 0 ? (
+                      <ol>
+                        {timeline.previous.map((asset, index) => (
+                          <li key={`${asset.id}-prev-${index}`}>{asset.title}</li>
+                        ))}
+                      </ol>
+                    ) : null}
+                  </div>
 
-                <div className="rounded-md border border-slate-800 p-3">
-                  <p className="mb-1 text-xs uppercase tracking-wide text-slate-400">Now Playing</p>
-                  <p className="font-medium">{timeline.current?.title ?? "Nothing live right now"}</p>
-                  <p className="text-sm text-slate-400">
-                    {timeline.current
-                      ? `${timeline.current.insertionCategory ?? timeline.current.type} · ${formatDuration(timeline.current.durationSec)}`
-                      : "Queue a playlist and go live."}
-                    {timeline.remainingSec !== undefined ? ` · ${formatDuration(timeline.remainingSec)} left` : ""}
-                  </p>
-                  <div className="mt-2">
-                    <Progress value={timeline.progressPct} />
+                  <div className="timelineRail__group">
+                    <h4>Now Playing</h4>
+                    <p className="row__title">{timeline.current?.title ?? "Nothing live right now"}</p>
+                    <p className="row__meta">
+                      {timeline.current
+                        ? `${timeline.current.insertionCategory ?? timeline.current.type} · ${formatDuration(timeline.current.durationSec)}`
+                        : "Queue a playlist and go live."}
+                      {timeline.remainingSec !== undefined ? ` · ${formatDuration(timeline.remainingSec)} left` : ""}
+                    </p>
+                    <div className="progressTrack">
+                      <span style={{ width: `${timeline.progressPct}%` }} />
+                    </div>
+                  </div>
+
+                  <div className="timelineRail__group">
+                    <h4>Up Next</h4>
+                    {timeline.next.length === 0 ? <p className="empty">No upcoming items.</p> : null}
+                    {timeline.next.length > 0 ? (
+                      <ol>
+                        {timeline.next.map((asset, index) => (
+                          <li key={`${asset.id}-next-${index}`}>{asset.title}</li>
+                        ))}
+                      </ol>
+                    ) : null}
                   </div>
                 </div>
+              </div>
+            </section>
 
+            <section className="section">
+              <header className="section__head">
                 <div>
-                  <p className="mb-1 text-xs uppercase tracking-wide text-slate-400">Up Next</p>
-                  {timeline.next.length === 0 ? <p className="text-sm text-slate-500">No upcoming items.</p> : null}
-                  <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-300">
-                    {timeline.next.map((asset, index) => (
-                      <li key={`${asset.id}-next-${index}`}>{asset.title}</li>
-                    ))}
-                  </ol>
+                  <h2>Playlist Builder</h2>
+                  <p>Append station programs to draft queue, reorder, then push live.</p>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Playlist Builder</CardTitle>
-                <CardDescription>Add station programs, reorder, then push the new order to live playout.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-wide text-slate-400">Station Programs</p>
-                  {stationPrograms.length === 0 ? <p className="text-sm text-slate-500">Import programs from global library first.</p> : null}
-                  {stationPrograms.map((asset) => (
-                    <div key={asset.id} className="flex items-center justify-between rounded-md border border-slate-800 p-2">
-                      <div>
-                        <p className="text-sm font-medium">{asset.title}</p>
-                        <p className="text-xs text-slate-400">{formatDuration(asset.durationSec)}</p>
-                      </div>
-                      <Button size="sm" variant="outline" onClick={() => addProgramToDraft(asset.id)} disabled={busy}>Add</Button>
+              </header>
+              <div className="section__body">
+                <div className="stack">
+                  <p className="microTag">Station Programs</p>
+                  {stationPrograms.length === 0 ? <p className="empty">Import programs from global library first.</p> : null}
+                  {stationPrograms.length > 0 ? (
+                    <div className="list">
+                      {stationPrograms.map((asset) => (
+                        <article key={asset.id} className="row">
+                          <div>
+                            <p className="row__title">{asset.title}</p>
+                            <p className="row__meta">{formatDuration(asset.durationSec)}</p>
+                          </div>
+                          <div className="row__actions">
+                            <button className="button" data-variant="secondary" onClick={() => addProgramToDraft(asset.id)} disabled={busy}>
+                              Add
+                            </button>
+                          </div>
+                        </article>
+                      ))}
                     </div>
-                  ))}
+                  ) : null}
                 </div>
 
-                <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-wide text-slate-400">Draft Playlist</p>
-                  {queuePreview.length === 0 ? <p className="text-sm text-slate-500">Draft queue is empty.</p> : null}
-                  {queuePreview.map((asset, index) => (
-                    <div key={`${asset.id}-${index}`} className="flex items-center justify-between rounded-md border border-slate-800 p-2">
-                      <div>
-                        <p className="text-sm font-medium">{index + 1}. {asset.title}</p>
-                        <p className="text-xs text-slate-400">{formatDuration(asset.durationSec)}</p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button size="sm" variant="outline" disabled={busy || index === 0} onClick={() => moveDraftItem(index, -1)}>Up</Button>
-                        <Button size="sm" variant="outline" disabled={busy || index === queuePreview.length - 1} onClick={() => moveDraftItem(index, 1)}>Down</Button>
-                        <Button size="sm" variant="outline" disabled={busy} onClick={() => removeDraftItem(index)}>Remove</Button>
-                      </div>
+                <div className="stack">
+                  <p className="microTag">Draft Playlist</p>
+                  {queuePreview.length === 0 ? <p className="empty">Draft queue is empty.</p> : null}
+                  {queuePreview.length > 0 ? (
+                    <div className="list">
+                      {queuePreview.map((asset, index) => (
+                        <article key={`${asset.id}-${index}`} className="row">
+                          <div>
+                            <p className="row__title">{index + 1}. {asset.title}</p>
+                            <p className="row__meta">{formatDuration(asset.durationSec)}</p>
+                          </div>
+                          <div className="row__actions">
+                            <button
+                              className="button"
+                              data-variant="secondary"
+                              disabled={busy || index === 0}
+                              onClick={() => moveDraftItem(index, -1)}
+                            >
+                              Up
+                            </button>
+                            <button
+                              className="button"
+                              data-variant="secondary"
+                              disabled={busy || index === queuePreview.length - 1}
+                              onClick={() => moveDraftItem(index, 1)}
+                            >
+                              Down
+                            </button>
+                            <button className="button" data-variant="danger" disabled={busy} onClick={() => removeDraftItem(index)}>
+                              Remove
+                            </button>
+                          </div>
+                        </article>
+                      ))}
                     </div>
-                  ))}
+                  ) : null}
                 </div>
 
-                <Button onClick={() => void onSaveQueue()} disabled={busy}>Push Playlist To Stream</Button>
-              </CardContent>
-            </Card>
+                <div className="pageHero__actions">
+                  <button className="button" data-variant="accent" onClick={() => void onSaveQueue()} disabled={busy}>
+                    Push Playlist to Stream
+                  </button>
+                </div>
+              </div>
+            </section>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div className="grid2">
+            <section className="section">
+              <header className="section__head">
                 <div>
-                  <CardTitle>Schedule Runtime</CardTitle>
-                  <CardDescription>Create windows or run 24/7.</CardDescription>
+                  <h2>Schedule Runtime</h2>
+                  <p>Create run windows or switch directly to always-on mode.</p>
                 </div>
-                <Button variant="outline" onClick={() => void onStartAlwaysOnNow()} disabled={busy}>Start 24/7 Now</Button>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <form className="space-y-3" onSubmit={(event) => void onCreateSchedule(event)}>
-                  <Input type="datetime-local" value={scheduleStart} onChange={(event) => setScheduleStart(event.target.value)} required disabled={busy} />
-                  <Input type="datetime-local" value={scheduleEnd} onChange={(event) => setScheduleEnd(event.target.value)} disabled={busy} />
-                  <Button type="submit" disabled={busy || !scheduleStart}>Create Schedule</Button>
-                </form>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Active Schedules</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {detail.schedules.length === 0 ? <p className="text-sm text-slate-500">No schedules yet.</p> : null}
-                {[...detail.schedules]
-                  .sort((left, right) => Date.parse(left.startAt) - Date.parse(right.startAt))
-                  .map((schedule) => (
-                    <div key={schedule.id} className="flex items-center justify-between rounded-md border border-slate-800 p-2">
-                      <div>
-                        <p className="text-sm font-medium">{formatDateTime(schedule.startAt)}</p>
-                        <p className="text-xs text-slate-400">
-                          {schedule.endAt ? `Ends ${formatDateTime(schedule.endAt)}` : "24/7 (no end)"}
-                        </p>
-                      </div>
-                      <Button size="sm" variant="outline" onClick={() => void onDeleteSchedule(schedule.id)} disabled={busy}>Remove</Button>
-                    </div>
-                  ))}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader className="flex flex-row items-start justify-between gap-3">
-                <div>
-                  <CardTitle>Import Programs</CardTitle>
-                  <CardDescription>Pull programs from your global creator library.</CardDescription>
-                </div>
-                <Button variant="outline" onClick={() => void refreshLibrary(ownerWallet)} disabled={loadingLibrary}>
-                  {loadingLibrary ? "Refreshing..." : "Refresh"}
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {globalProgramLibrary.length === 0 ? <p className="text-sm text-slate-500">No global programs available.</p> : null}
-                {globalProgramLibrary.map((asset) => {
-                  const checked = selectedLibraryPrograms.includes(asset.id);
-                  return (
-                    <label key={asset.id} className="flex items-center gap-3 rounded-md border border-slate-800 p-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(event) => toggleLibraryProgram(asset.id, event.target.checked)}
-                        disabled={busy}
-                      />
-                      <span className="flex-1">{asset.title}</span>
-                      <span className="text-xs text-slate-500">{formatDuration(asset.durationSec)}</span>
-                    </label>
-                  );
-                })}
-                <Button
-                  onClick={() => void onImportLibraryAssets(selectedLibraryPrograms)}
-                  disabled={busy || selectedLibraryPrograms.length === 0 || !ownerWallet}
-                >
-                  Import Selected Programs
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Ads, Sponsors, Bumpers</CardTitle>
-                <CardDescription>Configure insertion frequency and station ad pool.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-wide text-slate-400">Injection Rules</p>
-                  <select
-                    className="h-10 w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100"
-                    value={adTriggerMode}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      if (value === "disabled" || value === "time_interval") {
-                        setAdTriggerMode(value);
-                        return;
-                      }
-                      setAdTriggerMode("every_n_programs");
-                    }}
-                    disabled={busy}
-                  >
-                    <option value="disabled">Disabled</option>
-                    <option value="every_n_programs">Every N Programs</option>
-                    <option value="time_interval">Time Interval</option>
-                  </select>
-
-                  {adTriggerMode === "every_n_programs" ? (
-                    <Input
-                      type="number"
-                      min={1}
-                      value={adInterval}
-                      onChange={(event) => setAdInterval(Number(event.target.value || 1))}
+                <button className="button" data-variant="secondary" onClick={() => void onStartAlwaysOnNow()} disabled={busy}>
+                  Start 24/7 Now
+                </button>
+              </header>
+              <div className="section__body">
+                <form className="stack" onSubmit={(event) => void onCreateSchedule(event)}>
+                  <label className="field">
+                    <span>Start Time</span>
+                    <input
+                      type="datetime-local"
+                      value={scheduleStart}
+                      onChange={(event) => setScheduleStart(event.target.value)}
+                      required
                       disabled={busy}
                     />
+                  </label>
+
+                  <label className="field">
+                    <span>End Time (Optional)</span>
+                    <input
+                      type="datetime-local"
+                      value={scheduleEnd}
+                      onChange={(event) => setScheduleEnd(event.target.value)}
+                      disabled={busy}
+                    />
+                  </label>
+
+                  <div className="pageHero__actions">
+                    <button className="button" data-variant="accent" type="submit" disabled={busy || !scheduleStart}>
+                      Create Schedule
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </section>
+
+            <section className="section">
+              <header className="section__head">
+                <div>
+                  <h2>Active Schedules</h2>
+                  <p>Ordered by start time ascending.</p>
+                </div>
+              </header>
+              <div className="section__body">
+                {detail.schedules.length === 0 ? <p className="empty">No schedules yet.</p> : null}
+                {detail.schedules.length > 0 ? (
+                  <div className="list">
+                    {[...detail.schedules]
+                      .sort((left, right) => Date.parse(left.startAt) - Date.parse(right.startAt))
+                      .map((schedule) => (
+                        <article key={schedule.id} className="row">
+                          <div>
+                            <p className="row__title">{formatDateTime(schedule.startAt)}</p>
+                            <p className="row__meta">
+                              {schedule.endAt ? `Ends ${formatDateTime(schedule.endAt)}` : "24/7 (no end)"}
+                            </p>
+                          </div>
+                          <div className="row__actions">
+                            <button
+                              className="button"
+                              data-variant="danger"
+                              onClick={() => void onDeleteSchedule(schedule.id)}
+                              disabled={busy}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </article>
+                      ))}
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          </div>
+
+          <div className="grid2">
+            <section className="section">
+              <header className="section__head">
+                <div>
+                  <h2>Import Programs</h2>
+                  <p>Select programs from creator global library and add them to this station.</p>
+                </div>
+                <button
+                  className="button"
+                  data-variant="secondary"
+                  onClick={() => void refreshLibrary(ownerWallet)}
+                  disabled={loadingLibrary}
+                >
+                  {loadingLibrary ? "Refreshing" : "Refresh"}
+                </button>
+              </header>
+              <div className="section__body">
+                {globalProgramLibrary.length === 0 ? <p className="empty">No global programs available.</p> : null}
+                {globalProgramLibrary.length > 0 ? (
+                  <div className="list">
+                    {globalProgramLibrary.map((asset) => {
+                      const checked = selectedLibraryPrograms.includes(asset.id);
+                      return (
+                        <label key={asset.id} className="checkboxRow">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(event) => toggleLibraryProgram(asset.id, event.target.checked)}
+                            disabled={busy}
+                          />
+                          <span className="checkboxRow__title">{asset.title}</span>
+                          <span className="checkboxRow__meta">{formatDuration(asset.durationSec)}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : null}
+
+                <div className="pageHero__actions">
+                  <button
+                    className="button"
+                    data-variant="accent"
+                    onClick={() => void onImportLibraryAssets(selectedLibraryPrograms)}
+                    disabled={busy || selectedLibraryPrograms.length === 0 || !ownerWallet}
+                  >
+                    Import Selected Programs
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section className="section">
+              <header className="section__head">
+                <div>
+                  <h2>Ads, Sponsors, Bumpers</h2>
+                  <p>Set insertion policy and station ad pool.</p>
+                </div>
+              </header>
+              <div className="section__body">
+                <div className="stack">
+                  <p className="microTag">Injection Rules</p>
+
+                  <label className="field">
+                    <span>Trigger Mode</span>
+                    <select
+                      value={adTriggerMode}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        if (value === "disabled" || value === "time_interval") {
+                          setAdTriggerMode(value);
+                          return;
+                        }
+                        setAdTriggerMode("every_n_programs");
+                      }}
+                      disabled={busy}
+                    >
+                      <option value="disabled">Disabled</option>
+                      <option value="every_n_programs">Every N Programs</option>
+                      <option value="time_interval">Time Interval</option>
+                    </select>
+                  </label>
+
+                  {adTriggerMode === "every_n_programs" ? (
+                    <label className="field">
+                      <span>Interval (Programs)</span>
+                      <input
+                        type="number"
+                        min={1}
+                        value={adInterval}
+                        onChange={(event) => setAdInterval(Number(event.target.value || 1))}
+                        disabled={busy}
+                      />
+                    </label>
                   ) : null}
 
                   {adTriggerMode === "time_interval" ? (
-                    <Input
-                      type="number"
-                      min={30}
-                      value={adTimeIntervalSec}
-                      onChange={(event) => setAdTimeIntervalSec(Number(event.target.value || 30))}
-                      disabled={busy}
-                    />
+                    <label className="field">
+                      <span>Interval (Seconds)</span>
+                      <input
+                        type="number"
+                        min={30}
+                        value={adTimeIntervalSec}
+                        onChange={(event) => setAdTimeIntervalSec(Number(event.target.value || 30))}
+                        disabled={busy}
+                      />
+                    </label>
                   ) : null}
 
-                  <Button onClick={() => void onSaveAdRules()} disabled={busy}>Save Injection Rules</Button>
+                  <div className="pageHero__actions">
+                    <button className="button" data-variant="accent" onClick={() => void onSaveAdRules()} disabled={busy}>
+                      Save Injection Rules
+                    </button>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-wide text-slate-400">Import Global Ad Assets</p>
-                  {globalAdLibrary.length === 0 ? <p className="text-sm text-slate-500">No global ads/sponsors/bumpers yet.</p> : null}
-                  {globalAdLibrary.map((asset) => {
-                    const checked = selectedLibraryAds.includes(asset.id);
-                    return (
-                      <label key={asset.id} className="flex items-center gap-3 rounded-md border border-slate-800 p-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(event) => toggleLibraryAd(asset.id, event.target.checked)}
-                          disabled={busy}
-                        />
-                        <span className="flex-1">{asset.title}</span>
-                        <Badge variant="secondary">{asset.insertionCategory ?? "ad"}</Badge>
-                      </label>
-                    );
-                  })}
-                  <Button
-                    onClick={() => void onImportLibraryAssets(selectedLibraryAds)}
-                    disabled={busy || selectedLibraryAds.length === 0 || !ownerWallet}
-                  >
-                    Import Selected Ads
-                  </Button>
-                </div>
+                <div className="stack">
+                  <p className="microTag">Import Global Ad Assets</p>
+                  {globalAdLibrary.length === 0 ? <p className="empty">No global ads, sponsors, or bumpers yet.</p> : null}
 
-                <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-wide text-slate-400">Station Ad Pool</p>
-                  {stationAds.length === 0 ? <p className="text-sm text-slate-500">No ad assets in this station.</p> : null}
-                  {stationAds.map((asset) => (
-                    <div key={asset.id} className="flex items-center justify-between rounded-md border border-slate-800 p-2">
-                      <div>
-                        <p className="text-sm font-medium">{asset.title}</p>
-                        <p className="text-xs text-slate-400">{asset.insertionCategory ?? "ad"} · {formatDuration(asset.durationSec)}</p>
-                      </div>
-                      <Button size="sm" variant="outline" onClick={() => void onDeleteAsset(asset.id)} disabled={busy}>Remove</Button>
+                  {globalAdLibrary.length > 0 ? (
+                    <div className="list">
+                      {globalAdLibrary.map((asset) => {
+                        const checked = selectedLibraryAds.includes(asset.id);
+                        return (
+                          <label key={asset.id} className="checkboxRow">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(event) => toggleLibraryAd(asset.id, event.target.checked)}
+                              disabled={busy}
+                            />
+                            <span className="checkboxRow__title">{asset.title}</span>
+                            <span className="checkboxRow__meta">{asset.insertionCategory ?? "ad"}</span>
+                          </label>
+                        );
+                      })}
                     </div>
-                  ))}
+                  ) : null}
+
+                  <div className="pageHero__actions">
+                    <button
+                      className="button"
+                      data-variant="accent"
+                      onClick={() => void onImportLibraryAssets(selectedLibraryAds)}
+                      disabled={busy || selectedLibraryAds.length === 0 || !ownerWallet}
+                    >
+                      Import Selected Ads
+                    </button>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+
+                <div className="stack">
+                  <p className="microTag">Station Ad Pool</p>
+                  {stationAds.length === 0 ? <p className="empty">No ad assets in this station.</p> : null}
+                  {stationAds.length > 0 ? (
+                    <div className="list">
+                      {stationAds.map((asset) => (
+                        <article key={asset.id} className="row">
+                          <div>
+                            <p className="row__title">{asset.title}</p>
+                            <p className="row__meta">
+                              {asset.insertionCategory ?? "ad"} · {formatDuration(asset.durationSec)}
+                            </p>
+                          </div>
+                          <div className="row__actions">
+                            <button
+                              className="button"
+                              data-variant="danger"
+                              onClick={() => void onDeleteAsset(asset.id)}
+                              disabled={busy}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </section>
           </div>
         </>
       )}

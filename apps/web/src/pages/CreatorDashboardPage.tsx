@@ -1,12 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { createChannel, getChannelStatus, listChannels, listLibraryAssets, uploadLibraryAsset } from "../api";
-import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Input } from "../components/ui/input";
-import { Progress } from "../components/ui/progress";
-import { Textarea } from "../components/ui/textarea";
 import type { Asset, AssetInsertionCategory, ChannelSummary, PlayoutState, StreamMode } from "../types";
 import { disconnectWallet, formatWalletAddress, getStoredWalletAddress } from "../wallet";
 
@@ -42,7 +36,6 @@ export default function CreatorDashboardPage() {
   const navigate = useNavigate();
   const [wallet, setWallet] = useState<string | null>(() => getStoredWalletAddress());
   const [section, setSection] = useState<DashboardSection>("stations");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const [stations, setStations] = useState<StationCard[]>([]);
   const [loadingStations, setLoadingStations] = useState(false);
@@ -69,6 +62,7 @@ export default function CreatorDashboardPage() {
   if (!wallet) {
     return <Navigate to="/" replace />;
   }
+
   const ownerWallet = wallet;
 
   async function refreshStations() {
@@ -223,107 +217,100 @@ export default function CreatorDashboardPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl space-y-4 px-4 py-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Creator Dashboard</CardTitle>
-          <CardDescription>
-            Upload once to your global library, then import into stations for scheduling and live playout.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+    <main className="page">
+      <section className="pageHero">
+        <div className="pageHero__meta">
+          <span className="microTag" data-tone="accent">
+            Creator Dashboard
+          </span>
+          <span className="microTag">Wallet {formatWalletAddress(ownerWallet)}</span>
+        </div>
+        <h1>Operate stations with strict control over media, runtime, and output.</h1>
+        <p>
+          Build your global asset library once, compose channel playlists with deterministic ordering, and run live output
+          from a single surface.
+        </p>
+        <div className="pageHero__actions">
+          <button className="button" type="button" onClick={() => setSection("stations")}>Stations</button>
+          <button className="button" data-variant="secondary" type="button" onClick={() => setSection("library")}>
+            Library
+          </button>
+          <button className="button" data-variant="secondary" type="button" onClick={() => setSection("account")}>
+            Account
+          </button>
+        </div>
+      </section>
 
       {error ? (
-        <div className="rounded-md border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-300">{error}</div>
+        <div className="alert" data-tone="error">
+          {error}
+        </div>
       ) : null}
       {info ? (
-        <div className="rounded-md border border-cyan-500/40 bg-cyan-500/10 p-3 text-sm text-cyan-200">{info}</div>
+        <div className="alert" data-tone="info">
+          {info}
+        </div>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
-        <Card>
-          <CardHeader className="space-y-3">
-            <Button variant="outline" onClick={() => setSidebarCollapsed((value) => !value)}>
-              {sidebarCollapsed ? "Expand Menu" : "Collapse Menu"}
-            </Button>
-            <div className="space-y-2">
-              <Button
-                variant={section === "library" ? "default" : "ghost"}
-                className="w-full justify-start"
-                onClick={() => setSection("library")}
-              >
-                Library
-              </Button>
-              <Button
-                variant={section === "stations" ? "default" : "ghost"}
-                className="w-full justify-start"
-                onClick={() => setSection("stations")}
-              >
-                Stations
-              </Button>
-              <Button
-                variant={section === "account" ? "default" : "ghost"}
-                className="w-full justify-start"
-                onClick={() => setSection("account")}
-              >
-                Account
-              </Button>
-            </div>
-          </CardHeader>
-        </Card>
+      <div className="toolbar" role="tablist" aria-label="Dashboard Sections">
+        <button type="button" data-active={section === "stations"} onClick={() => setSection("stations")}>Stations</button>
+        <button type="button" data-active={section === "library"} onClick={() => setSection("library")}>Library</button>
+        <button type="button" data-active={section === "account"} onClick={() => setSection("account")}>Account</button>
+      </div>
 
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Creator Snapshot</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-md border border-slate-800 p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Stations</p>
-                <p className="text-xl font-semibold">{snapshot.stations}</p>
-              </div>
-              <div className="rounded-md border border-slate-800 p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Live</p>
-                <p className="text-xl font-semibold">{snapshot.live}</p>
-              </div>
-              <div className="rounded-md border border-slate-800 p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Programs</p>
-                <p className="text-xl font-semibold">{snapshot.libraryPrograms}</p>
-              </div>
-              <div className="rounded-md border border-slate-800 p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Ads / Sponsors</p>
-                <p className="text-xl font-semibold">{snapshot.libraryAds}</p>
-              </div>
-            </CardContent>
-          </Card>
+      <section className="statsRail" aria-label="Creator Snapshot">
+        <article className="statCell">
+          <p className="statCell__label">Stations</p>
+          <p className="statCell__value">{snapshot.stations}</p>
+        </article>
+        <article className="statCell">
+          <p className="statCell__label">Live</p>
+          <p className="statCell__value">{snapshot.live}</p>
+        </article>
+        <article className="statCell">
+          <p className="statCell__label">Programs</p>
+          <p className="statCell__value">{snapshot.libraryPrograms}</p>
+        </article>
+        <article className="statCell">
+          <p className="statCell__label">Ads and Sponsor Units</p>
+          <p className="statCell__value">{snapshot.libraryAds}</p>
+        </article>
+      </section>
 
-          {section === "library" ? (
-            <Card>
-              <CardHeader className="flex flex-row items-start justify-between gap-3">
-                <div>
-                  <CardTitle>User Library</CardTitle>
-                  <CardDescription>Global asset library for this creator wallet.</CardDescription>
-                </div>
-                <Button variant="outline" onClick={() => void refreshLibrary()} disabled={loadingLibrary}>
-                  {loadingLibrary ? "Refreshing..." : "Refresh"}
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <form className="grid gap-3" onSubmit={(event) => void onUploadLibraryAsset(event)}>
-                  <Input
+      {section === "library" ? (
+        <div className="grid2">
+          <section className="section">
+            <header className="section__head">
+              <div>
+                <h2>Upload to Global Library</h2>
+                <p>Assets uploaded here are reusable across all stations owned by this wallet.</p>
+              </div>
+            </header>
+            <div className="section__body">
+              <form className="stack" onSubmit={(event) => void onUploadLibraryAsset(event)}>
+                <label className="field">
+                  <span>Media File</span>
+                  <input
                     type="file"
                     required
                     onChange={(event) => setLibraryFile(event.target.files?.[0] ?? null)}
                     disabled={uploadingLibrary}
                   />
-                  <Input
+                </label>
+
+                <label className="field">
+                  <span>Optional Title</span>
+                  <input
                     value={libraryTitle}
                     onChange={(event) => setLibraryTitle(event.target.value)}
                     disabled={uploadingLibrary}
-                    placeholder="Optional title"
+                    placeholder="Override detected title"
                   />
+                </label>
+
+                <label className="field">
+                  <span>Insertion Category</span>
                   <select
-                    className="h-10 w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100"
                     value={libraryKind}
                     onChange={(event) => {
                       const value = event.target.value;
@@ -340,76 +327,115 @@ export default function CreatorDashboardPage() {
                     <option value="sponsor">Sponsor Segment</option>
                     <option value="bumper">Bumper</option>
                   </select>
-                  <Button type="submit" disabled={uploadingLibrary || !libraryFile}>
-                    {uploadingLibrary ? "Uploading..." : "Upload To Global Library"}
-                  </Button>
-                  {uploadingLibrary ? (
-                    <div className="rounded-md border border-slate-800 p-3">
-                      <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
-                        <span>
-                          {libraryUploadPercent < 100
-                            ? "Uploading file"
-                            : "Upload complete, processing/compressing"}
-                        </span>
-                        <span>{libraryUploadPercent}%</span>
-                      </div>
-                      <Progress value={libraryUploadPercent} />
-                      {libraryUploadTotalBytes > 0 ? (
-                        <p className="mt-2 text-xs text-slate-500">
-                          {Math.round(libraryUploadLoadedBytes / (1024 * 1024))}MB /{" "}
-                          {Math.round(libraryUploadTotalBytes / (1024 * 1024))}MB
-                        </p>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </form>
+                </label>
 
-                <div className="space-y-2">
-                  {libraryAssets.length === 0 ? <p className="text-sm text-slate-400">No global library assets yet.</p> : null}
+                <div className="pageHero__actions">
+                  <button className="button" data-variant="accent" type="submit" disabled={uploadingLibrary || !libraryFile}>
+                    {uploadingLibrary ? "Uploading" : "Upload to Library"}
+                  </button>
+                  <button
+                    className="button"
+                    data-variant="secondary"
+                    type="button"
+                    onClick={() => void refreshLibrary()}
+                    disabled={loadingLibrary}
+                  >
+                    {loadingLibrary ? "Refreshing" : "Refresh"}
+                  </button>
+                </div>
+              </form>
+
+              {uploadingLibrary ? (
+                <div className="stack">
+                  <p className="metaLine">
+                    <span>{libraryUploadPercent < 100 ? "Uploading file" : "Processing and compressing"}</span>
+                    <span>{libraryUploadPercent}%</span>
+                  </p>
+                  <div className="progressTrack">
+                    <span style={{ width: `${libraryUploadPercent}%` }} />
+                  </div>
+                  {libraryUploadTotalBytes > 0 ? (
+                    <p className="empty">
+                      {Math.round(libraryUploadLoadedBytes / (1024 * 1024))}MB / {Math.round(libraryUploadTotalBytes / (1024 * 1024))}
+                      MB
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </section>
+
+          <section className="section">
+            <header className="section__head">
+              <div>
+                <h2>Current Library Assets</h2>
+                <p>Chronological record of media available to this creator account.</p>
+              </div>
+            </header>
+            <div className="section__body">
+              {libraryAssets.length === 0 ? <p className="empty">No global library assets yet.</p> : null}
+              {libraryAssets.length > 0 ? (
+                <div className="list">
                   {libraryAssets.map((asset) => (
-                    <div key={asset.id} className="flex items-center justify-between rounded-md border border-slate-800 p-3">
+                    <article key={asset.id} className="row">
                       <div>
-                        <p className="font-medium text-slate-100">{asset.title}</p>
-                        <p className="text-sm text-slate-400">{asset.insertionCategory ?? asset.type} · {formatDateTime(asset.createdAt)}</p>
+                        <p className="row__title">{asset.title}</p>
+                        <p className="row__meta">
+                          {asset.insertionCategory ?? asset.type} · {formatDateTime(asset.createdAt)}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary">{asset.mediaKind}</Badge>
+                      <div className="row__actions">
+                        <span className="badge">{asset.mediaKind}</span>
                         {asset.ipfsUrl ? (
-                          <Button asChild size="sm" variant="outline">
-                            <a href={asset.ipfsUrl} target="_blank" rel="noreferrer">IPFS</a>
-                          </Button>
+                          <a className="button" data-variant="secondary" href={asset.ipfsUrl} target="_blank" rel="noreferrer">
+                            IPFS
+                          </a>
                         ) : null}
                       </div>
-                    </div>
+                    </article>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          ) : null}
+              ) : null}
+            </div>
+          </section>
+        </div>
+      ) : null}
 
-          {section === "stations" ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Stations</CardTitle>
-                <CardDescription>Create stations and open station manager.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <form className="grid gap-3" onSubmit={(event) => void onCreateStation(event)}>
-                  <Input
+      {section === "stations" ? (
+        <div className="grid2">
+          <section className="section">
+            <header className="section__head">
+              <div>
+                <h2>Create Station</h2>
+                <p>Define station profile and stream mode. Brand color is derived automatically.</p>
+              </div>
+            </header>
+            <div className="section__body">
+              <form className="stack" onSubmit={(event) => void onCreateStation(event)}>
+                <label className="field">
+                  <span>Station Name</span>
+                  <input
                     value={name}
                     onChange={(event) => setName(event.target.value)}
                     placeholder="Station name"
                     required
                     disabled={creating}
                   />
-                  <Textarea
+                </label>
+
+                <label className="field">
+                  <span>Description</span>
+                  <textarea
                     value={description}
                     onChange={(event) => setDescription(event.target.value)}
-                    placeholder="Description"
+                    placeholder="What this station is for"
                     disabled={creating}
                   />
+                </label>
+
+                <label className="field">
+                  <span>Stream Mode</span>
                   <select
-                    className="h-10 w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100"
                     value={streamMode}
                     onChange={(event) => setStreamMode(event.target.value === "radio" ? "radio" : "video")}
                     disabled={creating}
@@ -417,60 +443,90 @@ export default function CreatorDashboardPage() {
                     <option value="video">Video</option>
                     <option value="radio">Radio</option>
                   </select>
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="submit" disabled={!name.trim() || creating}>{creating ? "Creating..." : "Create Station"}</Button>
-                    <Button variant="outline" type="button" disabled={loadingStations} onClick={() => void refreshStations()}>
-                      {loadingStations ? "Refreshing..." : "Refresh Stations"}
-                    </Button>
-                  </div>
-                </form>
+                </label>
 
-                <div className="space-y-2">
-                  {loadingStations ? <p className="text-sm text-slate-400">Loading stations...</p> : null}
-                  {!loadingStations && stations.length === 0 ? (
-                    <p className="text-sm text-slate-400">No stations yet. Create your first station above.</p>
-                  ) : null}
+                <div className="pageHero__actions">
+                  <button className="button" data-variant="accent" type="submit" disabled={!name.trim() || creating}>
+                    {creating ? "Creating" : "Create Station"}
+                  </button>
+                  <button
+                    className="button"
+                    data-variant="secondary"
+                    type="button"
+                    disabled={loadingStations}
+                    onClick={() => void refreshStations()}
+                  >
+                    {loadingStations ? "Refreshing" : "Refresh Stations"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </section>
+
+          <section className="section">
+            <header className="section__head">
+              <div>
+                <h2>Station Roster</h2>
+                <p>Live stations are pinned to the top by runtime status.</p>
+              </div>
+            </header>
+            <div className="section__body">
+              {loadingStations ? <p className="loading">Loading stations...</p> : null}
+              {!loadingStations && stations.length === 0 ? (
+                <p className="empty">No stations yet. Create your first station in the panel on the left.</p>
+              ) : null}
+
+              {stations.length > 0 ? (
+                <div className="list">
                   {stations.map((station) => (
-                    <div key={station.summary.channel.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-800 p-3">
+                    <article key={station.summary.channel.id} className="row">
                       <div>
-                        <p className="font-medium">{station.summary.channel.name}</p>
-                        <p className="text-sm text-slate-400">
+                        <p className="row__title">{station.summary.channel.name}</p>
+                        <p className="row__meta">
                           {station.summary.channel.description || "No description"} · {station.summary.playlistCount} queued
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={station.state?.isRunning ? "default" : "secondary"}>
-                          {station.state?.isRunning ? "LIVE" : "OFF AIR"}
-                        </Badge>
-                        <Button asChild variant="outline" size="sm">
-                          <Link to={`/stations/${station.summary.channel.id}`}>Manage</Link>
-                        </Button>
-                        <Button asChild variant="outline" size="sm">
-                          <Link to={`/stations/${station.summary.channel.id}/preview`}>Preview</Link>
-                        </Button>
+                      <div className="row__actions">
+                        <span className="badge" data-tone={station.state?.isRunning ? "live" : "off"}>
+                          {station.state?.isRunning ? "Live" : "Off Air"}
+                        </span>
+                        <Link className="button" data-variant="secondary" to={`/stations/${station.summary.channel.id}`}>
+                          Manage
+                        </Link>
+                        <Link className="button" data-variant="secondary" to={`/stations/${station.summary.channel.id}/preview`}>
+                          Preview
+                        </Link>
                       </div>
-                    </div>
+                    </article>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {section === "account" ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Account / Profile</CardTitle>
-                <CardDescription>Wallet-scoped creator settings.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm text-slate-400">Connected wallet</p>
-                <p className="text-base font-medium">{formatWalletAddress(ownerWallet)}</p>
-                <Button variant="outline" onClick={onDisconnectWallet}>Disconnect Wallet</Button>
-              </CardContent>
-            </Card>
-          ) : null}
+              ) : null}
+            </div>
+          </section>
         </div>
-      </div>
+      ) : null}
+
+      {section === "account" ? (
+        <section className="section">
+          <header className="section__head">
+            <div>
+              <h2>Account and Session</h2>
+              <p>Wallet-scoped access control for creator operations.</p>
+            </div>
+          </header>
+          <div className="section__body">
+            <p className="metaLine">
+              <span className="badge">Connected Wallet</span>
+              <span>{formatWalletAddress(ownerWallet)}</span>
+            </p>
+            <div className="pageHero__actions">
+              <button className="button" data-variant="danger" onClick={onDisconnectWallet}>
+                Disconnect Wallet
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }

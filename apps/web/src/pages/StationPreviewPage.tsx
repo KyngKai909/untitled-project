@@ -2,9 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getApiBase, getChannelDetail, getChannelStatus } from "../api";
 import HlsPlayer from "../components/HlsPlayer";
-import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import type { ChannelDetail } from "../types";
 
 function resolveStreamUrl(channelId: string, detail: ChannelDetail): string {
@@ -97,58 +94,71 @@ export default function StationPreviewPage() {
     }
     return resolveStreamUrl(channelId, detail);
   }, [channelId, detail]);
+
   const livepeerEmbedUrl = useMemo(
     () => toLivepeerEmbedUrl(detail?.livepeer?.enabled ? detail.livepeer.playbackId : undefined),
     [detail]
   );
 
   return (
-    <main className="mx-auto w-full max-w-7xl space-y-4 px-4 py-6">
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-slate-400">Station Preview</p>
-            <CardTitle>{detail?.channel.name ?? "Loading..."}</CardTitle>
-          </div>
-          <Button asChild variant="outline" size="sm">
-            <Link to={channelId ? `/stations/${channelId}` : "/dashboard"}>Back to Manager</Link>
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {error ? (
-            <div className="rounded-md border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-300">{error}</div>
-          ) : null}
+    <main className="page">
+      <section className="pageHero">
+        <div className="pageHero__meta">
+          <span className="microTag" data-tone="accent">Station Preview</span>
+          <span className="microTag">Read-only monitoring</span>
+        </div>
+        <h1>{detail?.channel.name ?? "Loading station"}</h1>
+        <p>Monitor stream health and current playout state without entering manager controls.</p>
+        <div className="pageHero__actions">
+          <Link className="button" data-variant="secondary" to={channelId ? `/stations/${channelId}` : "/dashboard"}>
+            Back to Manager
+          </Link>
+        </div>
+      </section>
 
+      {error ? (
+        <div className="alert" data-tone="error">
+          {error}
+        </div>
+      ) : null}
+
+      <section className="section">
+        <header className="section__head">
+          <div>
+            <h2>Live Signal</h2>
+            <p>Playback source is automatically switched to Livepeer when enabled.</p>
+          </div>
+        </header>
+        <div className="section__body">
           {loading || !detail ? (
-            <p className="text-sm text-slate-400">Loading stream...</p>
+            <p className="loading">Loading stream...</p>
           ) : (
             <>
-              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
-                <Badge variant={detail.state.isRunning ? "default" : "secondary"}>
-                  {detail.state.isRunning ? "LIVE" : "OFF AIR"}
-                </Badge>
+              <div className="metaLine">
+                <span className="badge" data-tone={detail.state.isRunning ? "live" : "off"}>
+                  {detail.state.isRunning ? "Live" : "Off Air"}
+                </span>
                 {detail.state.currentAssetTitle ? <span>{detail.state.currentAssetTitle}</span> : null}
-                {detail.state.currentStartedAt ? <span>started {formatDateTime(detail.state.currentStartedAt)}</span> : null}
+                {detail.state.currentStartedAt ? <span>Started {formatDateTime(detail.state.currentStartedAt)}</span> : null}
               </div>
 
               {livepeerEmbedUrl ? (
-                <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/60 p-2">
+                <div className="mediaFrame">
                   <iframe
                     src={livepeerEmbedUrl}
                     title="Livepeer Player"
                     allow="autoplay; fullscreen; picture-in-picture"
-                    className="aspect-video w-full rounded-md bg-black"
                   />
                 </div>
               ) : streamUrl ? (
                 <HlsPlayer src={streamUrl} muted={false} />
               ) : (
-                <p className="text-sm text-slate-400">No stream URL available yet.</p>
+                <p className="empty">No stream URL available yet.</p>
               )}
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </main>
   );
 }

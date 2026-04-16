@@ -80,9 +80,15 @@ export default function HlsPlayer({ src, autoPlay = true, muted = true }: HlsPla
   }, [autoPlay, muted, src]);
 
   return (
-    <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/60 p-2">
-      <video ref={videoRef} playsInline controls className="aspect-video w-full rounded-md bg-black" />
-      {error ? <p className="text-xs text-slate-400">{error}</p> : null}
+    <div className="stack">
+      <div className="mediaFrame">
+        <video ref={videoRef} playsInline controls />
+      </div>
+      {error ? (
+        <div className="alert" data-tone="error">
+          {error}
+        </div>
+      ) : null}
     </div>
   );
 }
