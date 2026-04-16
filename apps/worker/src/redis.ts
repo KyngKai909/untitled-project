@@ -30,7 +30,13 @@ async function getRedisClient(): Promise<OpenChannelRedisClient | undefined> {
   }
 
   redisConnectPromise = (async () => {
-    const client = createClient({ url: REDIS_URL });
+    const client = createClient({
+      url: REDIS_URL,
+      socket: {
+        connectTimeout: 1500,
+        reconnectStrategy: false
+      }
+    });
     client.on("error", (error) => {
       if (!warnedUnavailable) {
         console.warn(`[worker] Redis error: ${error.message}`);
