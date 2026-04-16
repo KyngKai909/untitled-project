@@ -71,18 +71,6 @@ function sharedHlsArgs(segmentPattern: string, playlistPath: string): string[] {
   ];
 }
 
-function sharedHlsTeeTarget(segmentPattern: string, playlistPath: string): string {
-  return [
-    "[f=hls",
-    "hls_time=2",
-    "hls_list_size=6",
-    "hls_delete_threshold=1",
-    "hls_start_number_source=epoch",
-    "hls_flags=delete_segments+omit_endlist+independent_segments+program_date_time+temp_file",
-    `hls_segment_filename=${segmentPattern}]${playlistPath}`
-  ].join(":");
-}
-
 function looksAnimatedBackground(filePath: string | undefined): boolean {
   if (!filePath) {
     return false;
@@ -110,11 +98,11 @@ export async function startHlsSegmenter(
   const backgroundPath = options.radioBackgroundPath;
   const startOffsetSec = formatFfmpegSeconds(options.startOffsetSec);
   const maxDurationSec = formatFfmpegSeconds(options.maxDurationSec);
-  const livepeerIngestUrl = options.livepeerIngestUrl?.trim();
+  const trimmedLivepeerIngestUrl = options.livepeerIngestUrl?.trim();
+  const livepeerIngestUrl = trimmedLivepeerIngestUrl && trimmedLivepeerIngestUrl.length > 0
+    ? trimmedLivepeerIngestUrl
+    : undefined;
   const livepeerEnabled = Boolean(livepeerIngestUrl);
-  const outputArgs = livepeerEnabled
-    ? ["-f", "tee", `${sharedHlsTeeTarget(segmentPattern, playlistPath)}|[f=flv]${livepeerIngestUrl}`]
-    : sharedHlsArgs(segmentPattern, playlistPath);
 
   const args = shouldRenderRadioCanvas
     ? [
@@ -141,7 +129,24 @@ export async function startHlsSegmenter(
         "-tune",
         "stillimage",
         ...sharedEncoderArgs(),
-        ...outputArgs
+        ...sharedHlsArgs(segmentPattern, playlistPath),
+        ...(livepeerEnabled
+          ? [
+              "-map",
+              "0:v:0",
+              "-map",
+              "1:a:0",
+              "-shortest",
+              "-vf",
+              "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p,fps=30",
+              "-tune",
+              "stillimage",
+              ...sharedEncoderArgs(),
+              "-f",
+              "flv",
+              livepeerIngestUrl!
+            ]
+          : [])
       ]
     : [
         "-hide_banner",
@@ -155,7 +160,17 @@ export async function startHlsSegmenter(
         "-tune",
         "zerolatency",
         ...sharedEncoderArgs(),
-        ...outputArgs
+        ...sharedHlsArgs(segmentPattern, playlistPath),
+        ...(livepeerEnabled
+          ? [
+              "-tune",
+              "zerolatency",
+              ...sharedEncoderArgs(),
+              "-f",
+              "flv",
+              livepeerIngestUrl!
+            ]
+          : [])
       ];
 
   const process = spawn("ffmpeg", args, {
