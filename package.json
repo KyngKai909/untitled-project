@@ -7,6 +7,8 @@
     "packages/*"
   ],
   "scripts": {
+    "env:check": "node scripts/env-check.mjs",
+    "env:check:railway": "node scripts/env-check.mjs --railway",
     "predev": "npm run build -w @openchannel/shared",
     "dev": "concurrently -n API,WORKER,WEB -c blue,magenta,green \"npm run dev -w @openchannel/api\" \"npm run dev -w @openchannel/worker\" \"npm run dev -w @openchannel/web\"",
     "predev:runtime": "npm run build -w @openchannel/shared",
