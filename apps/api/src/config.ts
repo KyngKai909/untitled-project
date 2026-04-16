@@ -17,10 +17,7 @@ export const DB_PATH = path.join(STORAGE_ROOT, "db.json");
 export const DB_LOCK_PATH = path.join(STORAGE_ROOT, "db.lock");
 export const WEB_DIST_DIR = resolveWebDistDir(process.env.WEB_DIST_DIR);
 export const KEEP_ORIGINAL_UPLOADS = String(process.env.KEEP_ORIGINAL_UPLOADS ?? "false") === "true";
-export const MAX_COMPRESSION_INPUT_BYTES = parsePositiveIntEnv(
-  process.env.MAX_COMPRESSION_INPUT_BYTES,
-  1024 * 1024 * 1024
-);
+export const MAX_COMPRESSION_INPUT_BYTES = parseOptionalPositiveIntEnv(process.env.MAX_COMPRESSION_INPUT_BYTES);
 export const UPLOAD_STORAGE_MODE = normalizeUploadStorageMode(process.env.UPLOAD_STORAGE_MODE);
 export const DELETE_LOCAL_AFTER_IPFS = String(process.env.DELETE_LOCAL_AFTER_IPFS ?? "true") !== "false";
 
@@ -111,6 +108,14 @@ function parsePositiveIntEnv(value: string | undefined, fallback: number): numbe
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) {
     return fallback;
+  }
+  return Math.floor(parsed);
+}
+
+function parseOptionalPositiveIntEnv(value: string | undefined): number | undefined {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return undefined;
   }
   return Math.floor(parsed);
 }

@@ -1397,7 +1397,7 @@ app.post("/api/library/assets/upload", upload.single("file"), async (req, res) =
   let compression: Asset["compression"];
   let compressionWarning: string | undefined;
 
-  if (uploadSizeBytes && uploadSizeBytes > MAX_COMPRESSION_INPUT_BYTES) {
+  if (MAX_COMPRESSION_INPUT_BYTES && uploadSizeBytes && uploadSizeBytes > MAX_COMPRESSION_INPUT_BYTES) {
     compressionWarning = `Compression skipped for large upload (${formatMiB(uploadSizeBytes)} > ${formatMiB(
       MAX_COMPRESSION_INPUT_BYTES
     )}). Using source file directly for faster ingest.`;
@@ -1517,7 +1517,7 @@ app.post("/api/channels/:channelId/assets/upload", upload.single("file"), async 
   let compression: Asset["compression"];
   let compressionWarning: string | undefined;
 
-  if (uploadSizeBytes && uploadSizeBytes > MAX_COMPRESSION_INPUT_BYTES) {
+  if (MAX_COMPRESSION_INPUT_BYTES && uploadSizeBytes && uploadSizeBytes > MAX_COMPRESSION_INPUT_BYTES) {
     compressionWarning = `Compression skipped for large upload (${formatMiB(uploadSizeBytes)} > ${formatMiB(
       MAX_COMPRESSION_INPUT_BYTES
     )}). Using source file directly for faster ingest.`;
