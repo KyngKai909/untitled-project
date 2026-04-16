@@ -49,6 +49,23 @@ function formatDuration(seconds: number | undefined): string {
   return `${mins}:${String(rem).padStart(2, "0")}`;
 }
 
+function formatElapsed(seconds: number | undefined): string {
+  if (!seconds || seconds <= 0) {
+    return "--";
+  }
+  const total = Math.floor(seconds);
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  if (hours > 0) {
+    return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${String(secs).padStart(2, "0")}s`;
+  }
+  return `${secs}s`;
+}
+
 function toIsoDateTime(localInput: string): string | undefined {
   const trimmed = localInput.trim();
   if (!trimmed) {
@@ -335,6 +352,26 @@ export default function StationManagerPage() {
       progressPct
     };
   }, [detail, nowMs]);
+
+  const streamUptimeSec = useMemo(() => {
+    if (!detail?.state.currentStartedAt || !detail.state.isRunning) {
+      return undefined;
+    }
+    const startedAtMs = Date.parse(detail.state.currentStartedAt);
+    if (Number.isNaN(startedAtMs)) {
+      return undefined;
+    }
+    return Math.max(0, Math.floor((nowMs - startedAtMs) / 1000));
+  }, [detail, nowMs]);
+
+  const monitorStats = useMemo(() => {
+    return {
+      health: detail?.state.isRunning ? "Healthy" : "Offline",
+      route: detail?.livepeer?.enabled ? "Livepeer" : "Direct HLS",
+      schedules: detail?.schedules.length ?? 0,
+      queueDepth: detail?.playlist.length ?? 0
+    };
+  }, [detail]);
 
   function addProgramToDraft(assetId: string) {
     setQueueDraft((current) => [...current, assetId]);
@@ -755,6 +792,41 @@ export default function StationManagerPage() {
 
             {!loading && detail && tab === "monitor" ? (
               <>
+                <section className="workspaceSection">
+                  <header className="workspaceSection__head">
+                    <div>
+                      <h2>Control Room Overview</h2>
+                      <p>Health and routing snapshot inspired by live control-room workflows.</p>
+                    </div>
+                  </header>
+                  <div className="workspaceSection__body">
+                    <div className="healthGrid">
+                      <article className="healthCard">
+                        <h4>Stream Health</h4>
+                        <p>{monitorStats.health}</p>
+                        <small>{detail.state.isRunning ? "Receiving active signal" : "No live signal detected"}</small>
+                      </article>
+                      <article className="healthCard">
+                        <h4>Output Route</h4>
+                        <p>{monitorStats.route}</p>
+                        <small className="wrapAnywhere">{streamUrl || "URL unavailable"}</small>
+                      </article>
+                      <article className="healthCard">
+                        <h4>Uptime</h4>
+                        <p>{formatElapsed(streamUptimeSec)}</p>
+                        <small>Since current segment started</small>
+                      </article>
+                      <article className="healthCard">
+                        <h4>Queue & Schedule</h4>
+                        <p>
+                          {monitorStats.queueDepth} / {monitorStats.schedules}
+                        </p>
+                        <small>Programs in queue / active schedules</small>
+                      </article>
+                    </div>
+                  </div>
+                </section>
+
                 <section className="workspaceSection">
                   <header className="workspaceSection__head">
                     <div>

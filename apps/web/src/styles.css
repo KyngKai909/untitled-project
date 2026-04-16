@@ -951,6 +951,47 @@ a.uiButton {
   gap: 0.95rem;
 }
 
+.healthGrid {
+  border: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.healthCard {
+  border-right: 1px solid var(--line);
+  padding: 0.84rem 0.92rem;
+  min-height: 98px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.42rem;
+}
+
+.healthCard:last-child {
+  border-right: 0;
+}
+
+.healthCard h4 {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.healthCard p {
+  margin: 0;
+  font-size: 1.14rem;
+  font-weight: 600;
+}
+
+.healthCard small {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
 .managerTabs {
   border-bottom: 1px solid var(--line);
   display: grid;
@@ -1097,6 +1138,18 @@ a.uiButton {
     grid-template-columns: 1fr;
   }
 
+  .healthGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .healthCard:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .healthCard:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+
   .managerSplit__pane {
     border-right: 0;
     border-bottom: 1px solid var(--line);
@@ -1171,5 +1224,18 @@ a.uiButton {
 
   .managerTabs button:nth-child(-n + 2) {
     border-bottom: 1px solid var(--line);
+  }
+
+  .healthGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .healthCard {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .healthCard:last-child {
+    border-bottom: 0;
   }
 }
