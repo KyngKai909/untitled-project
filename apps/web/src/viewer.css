@@ -1,0 +1,1232 @@
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@10..48,400;10..48,500;10..48,700;10..48,800&family=Space+Mono:wght@400;700&display=swap");
+
+:root {
+  --sig-bg: #f4e9df;
+  --sig-paper: #fffaf4;
+  --sig-paper-strong: #ffffff;
+  --sig-line: #d2c8bb;
+  --sig-ink: #1d1b1a;
+  --sig-muted: #5c5957;
+  --sig-teal: #0e8c80;
+  --sig-teal-deep: #0a5e65;
+  --sig-orange: #f16d32;
+  --sig-orange-deep: #cb4d22;
+  --sig-glow: 0 12px 30px rgba(61, 38, 22, 0.12);
+}
+
+body {
+  background: var(--sig-bg);
+  color: var(--sig-ink);
+  font-family: "Bricolage Grotesque", "DM Sans", sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Bricolage Grotesque", "Sora", sans-serif;
+}
+
+.signalHeader {
+  position: sticky;
+  top: 0;
+  z-index: 80;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(161, 150, 138, 0.55);
+  background: rgba(250, 242, 234, 0.88);
+}
+
+.signalHeader__inner {
+  width: min(1260px, 96vw);
+  margin: 0 auto;
+  min-height: 74px;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.signalHeader__brand {
+  text-decoration: none;
+  color: var(--sig-ink);
+  font-size: 1.12rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.52rem;
+}
+
+.signalHeader__orb {
+  width: 0.92rem;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, #fff6de, #f58a4f 44%, #dd4f2a 82%);
+  box-shadow: 0 0 0 4px rgba(241, 109, 50, 0.2);
+  animation: pulseOrb 1700ms ease-in-out infinite;
+}
+
+.signalHeader__nav {
+  display: inline-flex;
+  gap: 0.2rem;
+  border-radius: 999px;
+  border: 1px solid #d6cabf;
+  background: rgba(255, 252, 247, 0.9);
+  padding: 0.22rem;
+}
+
+.signalHeader__navLink {
+  text-decoration: none;
+  color: var(--sig-muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.45rem 0.78rem;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.signalHeader__navLink:hover {
+  background: rgba(14, 140, 128, 0.1);
+  color: #2c3f40;
+}
+
+.signalHeader__navLink.is-active {
+  color: #fff;
+  background: linear-gradient(120deg, var(--sig-teal), var(--sig-teal-deep));
+}
+
+.signalHeader__flag {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.34rem;
+  border-radius: 999px;
+  border: 1px solid #dcc9bc;
+  background: linear-gradient(120deg, #fff6ec, #f6fff9);
+  padding: 0.31rem 0.56rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #484340;
+}
+
+.signalHeader__flagDot {
+  width: 0.5rem;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: #da3b2c;
+  box-shadow: 0 0 0 4px rgba(218, 59, 44, 0.22);
+}
+
+.signalExplore,
+.guideMatrixPage {
+  width: min(1260px, 96vw);
+  margin: 1.2rem auto 2.3rem;
+  display: grid;
+  gap: 1rem;
+  animation: riseIn 260ms ease;
+}
+
+.signalHeroV2,
+.guideMatrixHero {
+  border-radius: 28px;
+  padding: clamp(1.05rem, 2.6vw, 1.8rem);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow: var(--sig-glow);
+  color: #fff8ef;
+  position: relative;
+  overflow: hidden;
+}
+
+.signalHeroV2 {
+  background: linear-gradient(138deg, #0f3d4d 0%, #0f897d 52%, #1f5f8f 100%);
+  display: grid;
+  gap: 0.85rem;
+}
+
+.guideMatrixHero {
+  background: linear-gradient(132deg, #2a354f 0%, #0d7087 55%, #0d8c80 100%);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  align-items: baseline;
+}
+
+.signalHeroV2::before,
+.guideMatrixHero::before {
+  content: "";
+  position: absolute;
+  inset: auto -120px -120px auto;
+  width: 300px;
+  height: 260px;
+  border-radius: 44% 56% 38% 62% / 53% 42% 58% 47%;
+  background: rgba(250, 166, 108, 0.24);
+  pointer-events: none;
+}
+
+.signalHeroV2 > *,
+.guideMatrixHero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.signalHeroV2__eyebrow,
+.guideMatrixHero p {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.71rem;
+  font-weight: 700;
+  color: rgba(255, 247, 233, 0.92);
+}
+
+.signalHeroV2 h1,
+.guideMatrixHero h1 {
+  margin: 0;
+  font-size: clamp(1.55rem, 3.9vw, 2.95rem);
+  line-height: 1.04;
+}
+
+.signalHeroV2 p,
+.guideMatrixHero span {
+  margin: 0;
+  max-width: 86ch;
+}
+
+.guideMatrixHero span {
+  font-size: 0.9rem;
+  color: #e3f6ff;
+}
+
+.signalHeroV2__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.signalHeroV2__controls input {
+  flex: 1 1 340px;
+  min-width: 220px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 236, 209, 0.45);
+  background: rgba(11, 27, 39, 0.43);
+  color: #f9fff7;
+  padding: 0.66rem 0.74rem;
+}
+
+.signalHeroV2__controls input::placeholder {
+  color: rgba(231, 241, 235, 0.82);
+}
+
+.signalHeroV2__controls a {
+  text-decoration: none;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 237, 214, 0.42);
+  padding: 0.62rem 0.8rem;
+  color: #fffaf1;
+  background: rgba(14, 32, 45, 0.5);
+  font-weight: 700;
+}
+
+.signalTicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+}
+
+.signalTicker span {
+  border-radius: 999px;
+  border: 1px solid rgba(236, 244, 245, 0.36);
+  background: rgba(7, 22, 28, 0.34);
+  color: #f0fffa;
+  font-size: 0.73rem;
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+}
+
+.signalCanvas {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.36fr) minmax(0, 1fr);
+  gap: 0.8rem;
+  align-items: start;
+}
+
+.signalDock,
+.signalPanel,
+.guideMatrixToolbar,
+.guideRailCardV2,
+.watchDeckCard,
+.watchDeckTop,
+.watchDeck__loading {
+  border-radius: 18px;
+  border: 1px solid var(--sig-line);
+  background: var(--sig-paper);
+  box-shadow: 0 8px 20px rgba(61, 38, 22, 0.08);
+}
+
+.signalDock {
+  position: sticky;
+  top: 88px;
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.signalDock h2 {
+  margin: 0;
+  font-size: 1.08rem;
+}
+
+.signalDock__categories {
+  display: grid;
+  gap: 0.34rem;
+}
+
+.signalDock__categories button,
+.signalDock > button,
+.guideMatrixToolbar button,
+.watchDeckCard button,
+.watchRequestListV2 button {
+  appearance: none;
+  border: 1px solid #d4c8bc;
+  border-radius: 10px;
+  background: #fff;
+  color: #47433f;
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 0.43rem 0.56rem;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease;
+}
+
+.signalDock__categories button:hover,
+.signalDock > button:hover,
+.guideMatrixToolbar button:hover,
+.watchDeckCard button:hover,
+.watchRequestListV2 button:hover {
+  border-color: #b8aea2;
+  transform: translateY(-1px);
+}
+
+.signalDock__categories button.is-active {
+  color: #fff;
+  border-color: #0f7f76;
+  background: linear-gradient(120deg, var(--sig-teal), var(--sig-teal-deep));
+}
+
+.signalDock__stats {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.signalDock__stats article {
+  border-radius: 12px;
+  border: 1px solid #daccbf;
+  background: #fff;
+  padding: 0.45rem 0.55rem;
+  display: grid;
+  gap: 0.08rem;
+}
+
+.signalDock__stats strong {
+  font-size: 1.02rem;
+}
+
+.signalDock__stats span {
+  font-size: 0.73rem;
+  color: var(--sig-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 700;
+}
+
+.signalPanels {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.signalPanel {
+  padding: 0.84rem;
+  display: grid;
+  gap: 0.72rem;
+}
+
+.signalPanel__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.54rem;
+}
+
+.signalPanel__head h2 {
+  margin: 0;
+  font-size: clamp(1.08rem, 2vw, 1.5rem);
+}
+
+.signalPanel__head span {
+  font-size: 0.74rem;
+  color: var(--sig-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.signalFeatureGrid {
+  display: grid;
+  gap: 0.62rem;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.channelCard {
+  --channel-accent: #0f8e87;
+  border-radius: 16px;
+  border: 1px solid #d1c6b9;
+  background:
+    radial-gradient(circle at 86% 10%, color-mix(in srgb, var(--channel-accent), #ffffff 60%), transparent 50%),
+    linear-gradient(145deg, #fffdfa 0%, #fff 45%, #f6f4ef 100%);
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.74rem;
+  text-decoration: none;
+  color: var(--sig-ink);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.channelCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 25px rgba(39, 27, 17, 0.13);
+}
+
+.channelCard--feature {
+  grid-column: span 2;
+  min-height: 250px;
+  padding: 0.92rem;
+}
+
+.channelCard--compact {
+  min-height: 145px;
+}
+
+.channelCard__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.channelCard__status,
+.channelCard__viewers {
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.48rem;
+  text-transform: uppercase;
+}
+
+.channelCard__status.is-live {
+  background: #d73c2f;
+  color: #fff;
+}
+
+.channelCard__status.is-offline {
+  background: #8e8b86;
+  color: #fff;
+}
+
+.channelCard__viewers {
+  background: rgba(24, 29, 35, 0.08);
+  color: #3f4951;
+}
+
+.channelCard__body {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.channelCard__body h3 {
+  margin: 0;
+  font-size: clamp(1rem, 1.9vw, 1.3rem);
+  line-height: 1.12;
+}
+
+.channelCard__body p {
+  margin: 0;
+  color: var(--sig-muted);
+  font-size: 0.84rem;
+}
+
+.channelCard__chips,
+.channelCard__tags,
+.watchDeckPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.channelCard__chips span,
+.channelCard__tags span,
+.watchDeckPills span {
+  border-radius: 999px;
+  border: 1px solid #d6cbbe;
+  background: #fff;
+  color: #4d4a47;
+  font-size: 0.67rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.18rem 0.4rem;
+}
+
+.channelCard__tags span {
+  background: #f8f4ee;
+  color: #66615d;
+}
+
+.signalChannelGrid {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.signalCreatorGrid {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.creatorCard {
+  --creator-accent: #0f8e87;
+  border-radius: 15px;
+  border: 1px solid #d2c7ba;
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--creator-accent), #ffffff 86%), #fff8f1);
+  padding: 0.72rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.58rem;
+  align-items: start;
+}
+
+.creatorCard__avatar {
+  width: 45px;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 0.86rem;
+  color: #fff;
+  background: linear-gradient(132deg, var(--creator-accent), color-mix(in srgb, var(--creator-accent), black 26%));
+}
+
+.creatorCard__body {
+  display: grid;
+  gap: 0.21rem;
+}
+
+.creatorCard__body h3 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.creatorCard__handle,
+.creatorCard__bio,
+.creatorCard__meta {
+  margin: 0;
+  color: var(--sig-muted);
+  font-size: 0.79rem;
+}
+
+.creatorCard__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.34rem;
+}
+
+.creatorCard__actions {
+  grid-column: 1 / -1;
+}
+
+.creatorCard__actions a {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  border-radius: 999px;
+  border: 1px solid #cdbfb1;
+  background: #fff;
+  color: #3c3a37;
+  padding: 0.35rem 0.56rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.signalSkeletonGrid {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.signalSkeletonCard {
+  border-radius: 16px;
+  min-height: 190px;
+  border: 1px solid #d5cabb;
+  background: linear-gradient(110deg, #fbf5ec 15%, #fffdf9 38%, #f6ede2 58%);
+  background-size: 190% 100%;
+  animation: shimmer 1.25s linear infinite;
+}
+
+.signalEmptyState {
+  border-radius: 16px;
+  border: 1px dashed #cdbfb0;
+  background: #fffefc;
+  padding: 1rem;
+  display: grid;
+  gap: 0.3rem;
+  text-align: center;
+}
+
+.signalEmptyState h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.signalEmptyState p,
+.signalError {
+  margin: 0;
+  color: #684538;
+}
+
+.signalError {
+  border-radius: 12px;
+  border: 1px solid #deb6b2;
+  background: #fff2f1;
+  padding: 0.55rem 0.64rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.guideMatrixToolbar {
+  padding: 0.68rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.44rem;
+  align-items: center;
+}
+
+.guideMatrixToolbar__range {
+  border-radius: 10px;
+  border: 1px solid #d3c6b8;
+  background: #fff;
+  padding: 0.34rem 0.46rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: "Space Mono", monospace;
+  font-size: 0.78rem;
+}
+
+.guideMatrixToolbar label {
+  border-radius: 10px;
+  border: 1px solid #d4c7b9;
+  background: #fff;
+  padding: 0.37rem 0.48rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #55514d;
+}
+
+.guideMatrixLoading {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.guideMatrixLoading__card {
+  border-radius: 15px;
+  border: 1px solid #d6cbbe;
+  min-height: 128px;
+  background: linear-gradient(110deg, #fcf7f0 15%, #fffdfa 38%, #f7f0e7 58%);
+  background-size: 190% 100%;
+  animation: shimmer 1.25s linear infinite;
+}
+
+.guideRailStack {
+  display: grid;
+  gap: 0.62rem;
+}
+
+.guideRailCardV2 {
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.guideRailCardV2 header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.guideRailCardV2 header a {
+  text-decoration: none;
+  color: var(--sig-ink);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.guideRailCardV2 header p {
+  margin: 0.14rem 0 0;
+  color: var(--sig-muted);
+  font-size: 0.81rem;
+}
+
+.guideRailCardV2__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.26rem;
+}
+
+.guideRailCardV2__meta span {
+  border-radius: 999px;
+  border: 1px solid #d6c9bb;
+  background: #fff;
+  color: #55514d;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.19rem 0.42rem;
+}
+
+.guideRailCardV2__ruler {
+  position: relative;
+  height: 22px;
+  overflow: hidden;
+}
+
+.guideRailCardV2__ruler span {
+  position: absolute;
+  top: 0;
+  transform: translateX(2px);
+  color: #7f7b76;
+  font-size: 0.66rem;
+  font-family: "Space Mono", monospace;
+}
+
+.guideRailCardV2__viewport {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #d8cec2;
+  background: #fff;
+}
+
+.guideRailCardV2__track {
+  position: relative;
+  min-height: 86px;
+}
+
+.guideRailCardV2__track i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed #e0d6ca;
+}
+
+.guideRailCardV2__now {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #f16d32;
+  z-index: 3;
+}
+
+.guideRailCardV2__now::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 10px;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: #f16d32;
+}
+
+.guideProgramCapsule {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  border-radius: 10px;
+  border: 1px solid #d0c3b4;
+  background: linear-gradient(130deg, #fff8ed, #f6fff9);
+  padding: 0.28rem 0.42rem;
+  display: grid;
+  gap: 0.1rem;
+  text-decoration: none;
+  overflow: hidden;
+}
+
+.guideProgramCapsule strong {
+  color: #332f2c;
+  font-size: 0.77rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.guideProgramCapsule span {
+  color: #6b6762;
+  font-size: 0.66rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.guideProgramCapsule.is-current {
+  border-color: #e18c60;
+  background: linear-gradient(130deg, #fff2e9, #ffe3d5);
+}
+
+.guideRailCardV2__empty {
+  margin: 0;
+  color: #77716c;
+  padding: 1rem;
+  font-size: 0.8rem;
+}
+
+.watchDeck {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 7% -3%, rgba(241, 109, 50, 0.19), transparent 30%),
+    radial-gradient(circle at 88% 6%, rgba(13, 140, 128, 0.16), transparent 35%),
+    var(--sig-bg);
+  color: var(--sig-ink);
+  padding: 1rem min(2.2vw, 1.2rem) 1.5rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.watchDeck--center {
+  display: grid;
+  place-items: center;
+}
+
+.watchDeck__loading {
+  width: min(580px, 95vw);
+  padding: 1rem;
+  display: grid;
+  gap: 0.4rem;
+  text-align: center;
+}
+
+.watchDeck__loading h1 {
+  margin: 0;
+}
+
+.watchDeck__loading p {
+  margin: 0;
+  color: var(--sig-muted);
+}
+
+.watchDeck__loading a {
+  margin: 0 auto;
+  text-decoration: none;
+  color: #fff;
+  border-radius: 10px;
+  background: linear-gradient(120deg, var(--sig-teal), var(--sig-teal-deep));
+  padding: 0.46rem 0.7rem;
+  font-weight: 700;
+}
+
+.watchDeckTop {
+  width: min(1320px, 99vw);
+  margin: 0 auto;
+  padding: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.watchDeckTop p {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #7c756e;
+}
+
+.watchDeckTop h1 {
+  margin: 0.1rem 0;
+  font-size: clamp(1.18rem, 2.6vw, 1.9rem);
+}
+
+.watchDeckTop span {
+  color: var(--sig-muted);
+  font-size: 0.77rem;
+  font-weight: 700;
+}
+
+.watchDeckTop__actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.watchDeckTop__actions a {
+  text-decoration: none;
+  border-radius: 10px;
+  border: 1px solid #d3c7ba;
+  color: #43403c;
+  background: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.38rem 0.6rem;
+}
+
+.watchDeckGrid {
+  width: min(1320px, 99vw);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.36fr) minmax(340px, 0.88fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.watchDeckMain,
+.watchDeckSide {
+  display: grid;
+  gap: 0.68rem;
+}
+
+.watchDeckCard {
+  padding: 0.74rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.watchDeckCard--player {
+  padding: 0.65rem;
+}
+
+.watchDeckCard__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
+.watchDeckCard__head h2 {
+  margin: 0;
+  font-size: 1.03rem;
+}
+
+.watchDeckCard__head span {
+  font-size: 0.72rem;
+  color: #6d6862;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.watchDeckCard--now h3 {
+  margin: 0;
+  font-size: 1.22rem;
+}
+
+.watchDeckCard--now p,
+.watchDeckCard--skip p,
+.watchDeckCard--requests p,
+.watchScheduleListV2 p,
+.watchQueueStripV2 p,
+.watchRequestListV2 p {
+  margin: 0;
+  color: var(--sig-muted);
+  font-size: 0.82rem;
+}
+
+.watchDeckProgress {
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e2d8ce;
+}
+
+.watchDeckProgress i,
+.watchVoteMeterV2 i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(120deg, var(--sig-teal), var(--sig-orange));
+}
+
+.watchQueueStripV2 {
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.watchQueueStripV2 div {
+  border-radius: 12px;
+  border: 1px solid #d5cabc;
+  background: #fff;
+  padding: 0.45rem;
+  display: grid;
+  gap: 0.16rem;
+}
+
+.watchQueueStripV2 div.is-current {
+  border-color: #e18b5c;
+  background: #fff2e6;
+}
+
+.watchQueueStripV2 strong {
+  font-size: 0.75rem;
+  color: #55504c;
+}
+
+.watchQueueStripV2 span {
+  font-size: 0.7rem;
+  color: #7a746e;
+}
+
+.watchVoteMeterV2 {
+  height: 9px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e4d9cc;
+}
+
+.watchSignalMessage {
+  border-radius: 10px;
+  border: 1px solid #cab8a7;
+  background: #fff5eb;
+  color: #704a30;
+  padding: 0.44rem 0.52rem;
+  font-size: 0.77rem;
+  font-weight: 700;
+}
+
+.watchRequestFormV2 {
+  display: grid;
+  gap: 0.42rem;
+}
+
+.watchRequestFormV2 label {
+  display: grid;
+  gap: 0.22rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #58534f;
+}
+
+.watchRequestFormV2 input,
+.watchRequestFormV2 textarea {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #d2c6b8;
+  background: #fff;
+  color: #302e2c;
+  padding: 0.44rem 0.52rem;
+}
+
+.watchRequestFormV2 button,
+.watchDeckCard--skip button {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: linear-gradient(120deg, var(--sig-teal), var(--sig-teal-deep));
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.81rem;
+  padding: 0.5rem 0.65rem;
+  cursor: pointer;
+}
+
+.watchRequestFormV2 button:disabled,
+.watchDeckCard--skip button:disabled,
+.watchRequestListV2 button:disabled,
+.guideMatrixToolbar button:disabled,
+.signalDock button:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.watchRequestListV2 {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.watchRequestListV2 li {
+  border-radius: 12px;
+  border: 1px solid #d3c7ba;
+  background: #fff;
+  padding: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.watchRequestListV2 strong {
+  display: block;
+  font-size: 0.86rem;
+}
+
+.watchRequestListV2 a {
+  font-size: 0.72rem;
+  color: #2d6f6f;
+  word-break: break-all;
+}
+
+.watchRequestListV2 li > div:last-child {
+  display: grid;
+  justify-items: end;
+  gap: 0.3rem;
+}
+
+.watchRequestListV2 li > div:last-child span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #70685f;
+}
+
+.watchScheduleListV2 {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.38rem;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.watchScheduleListV2 li {
+  border-radius: 11px;
+  border: 1px solid #d5c8b9;
+  background: #fff;
+  padding: 0.45rem;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.watchScheduleListV2 li.is-current {
+  border-color: #e2895a;
+  background: #fff2e7;
+}
+
+.watchScheduleListV2 li > span {
+  min-width: 46px;
+  font-size: 0.73rem;
+  font-weight: 700;
+  color: #605a54;
+}
+
+.watchScheduleListV2 strong {
+  display: block;
+  font-size: 0.85rem;
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 170% 0;
+  }
+  to {
+    background-position: -40% 0;
+  }
+}
+
+@keyframes pulseOrb {
+  0% {
+    box-shadow: 0 0 0 4px rgba(241, 109, 50, 0.2);
+  }
+  55% {
+    box-shadow: 0 0 0 8px rgba(241, 109, 50, 0.07);
+  }
+  100% {
+    box-shadow: 0 0 0 4px rgba(241, 109, 50, 0.2);
+  }
+}
+
+@media (max-width: 1040px) {
+  .signalCanvas,
+  .watchDeckGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .signalDock {
+    position: static;
+  }
+
+  .watchDeckTop {
+    flex-direction: column;
+    align-items: start;
+  }
+}
+
+@media (max-width: 780px) {
+  .signalHeader__inner {
+    min-height: 66px;
+    flex-wrap: wrap;
+    padding: 0.35rem 0;
+  }
+
+  .signalHeader__flag {
+    display: none;
+  }
+
+  .signalHeader__nav {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .signalExplore,
+  .guideMatrixPage {
+    margin-top: 0.82rem;
+  }
+
+  .channelCard--feature {
+    grid-column: span 1;
+    min-height: 0;
+  }
+
+  .guideRailCardV2 header {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .guideRailCardV2__meta {
+    justify-content: start;
+  }
+
+  .watchRequestListV2 li,
+  .watchScheduleListV2 li {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .watchRequestListV2 li > div:last-child {
+    justify-items: start;
+  }
+}
