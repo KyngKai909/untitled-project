@@ -11,12 +11,7 @@ import type {
 } from "@openchannel/shared";
 import { HLS_ROOT, POLL_INTERVAL_MS, UPLOAD_ROOT } from "./config.js";
 import { getChannel, getOrCreatePlayoutState, readDb, transaction } from "./db.js";
-import {
-  resetChannelOutput,
-  startHlsSegmenter,
-  startRtmpForwarder,
-  type FfmpegSession
-} from "./ffmpeg.js";
+import { resetChannelOutput, startHlsSegmenter, type FfmpegSession } from "./ffmpeg.js";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -147,15 +142,6 @@ function getLivepeerConfig(db: DatabaseSchema, channelId: string): LivepeerConfi
   return db.livepeerConfigs.find((entry) => entry.channelId === channelId);
 }
 
-async function manifestHasSegments(manifestPath: string): Promise<boolean> {
-  try {
-    const content = await fs.readFile(manifestPath, "utf8");
-    return content.includes(".ts");
-  } catch {
-    return false;
-  }
-}
-
 async function resolveRadioBackgroundPath(backgroundUrl: string | undefined): Promise<string | undefined> {
   if (!backgroundUrl) {
     return undefined;
@@ -180,11 +166,6 @@ async function resolveRadioBackgroundPath(backgroundUrl: string | undefined): Pr
 class ChannelRuntime {
   private loopPromise?: Promise<void>;
   private currentSession?: FfmpegSession;
-  private livepeerSession?: FfmpegSession;
-  private livepeerLoopPromise?: Promise<void>;
-  private livepeerStopRequested = false;
-  private livepeerIngestUrl?: string;
-  private outputDir?: string;
   private stopRequested = false;
   private skipRequested = false;
   private previousRequested = false;
@@ -214,7 +195,6 @@ class ChannelRuntime {
   stop() {
     this.stopRequested = true;
     this.currentSession?.process.kill("SIGTERM");
-    this.stopLivepeerForwarder();
   }
 
   skip() {
@@ -237,19 +217,6 @@ class ChannelRuntime {
     this.currentSession.process.kill("SIGTERM");
   }
 
-  syncLivepeer(config: LivepeerConfig | undefined) {
-    if (!this.loopPromise || !this.outputDir) {
-      return;
-    }
-
-    if (config?.enabled && config.ingestUrl) {
-      this.startLivepeerForwarder(this.outputDir, config.ingestUrl);
-      return;
-    }
-
-    this.stopLivepeerForwarder();
-  }
-
   async waitForStop(timeoutMs = 5000) {
     if (!this.loopPromise) {
       return;
@@ -258,65 +225,9 @@ class ChannelRuntime {
     await Promise.race([this.loopPromise, sleep(timeoutMs)]);
   }
 
-  private stopLivepeerForwarder() {
-    this.livepeerStopRequested = true;
-    this.livepeerSession?.process.kill("SIGTERM");
-  }
-
-  private startLivepeerForwarder(outputDir: string, ingestUrl: string) {
-    if (this.livepeerLoopPromise && this.livepeerIngestUrl === ingestUrl) {
-      return;
-    }
-
-    this.stopLivepeerForwarder();
-    this.livepeerStopRequested = false;
-    this.livepeerIngestUrl = ingestUrl;
-    console.log(`[worker] channel ${this.channelId} livepeer forwarder start -> ${ingestUrl}`);
-    this.livepeerLoopPromise = this.runLivepeerForwarderLoop(outputDir, ingestUrl)
-      .catch((error) => {
-        console.error(`[worker] channel ${this.channelId} livepeer forwarder failed`, error);
-      })
-      .finally(() => {
-        this.livepeerLoopPromise = undefined;
-        this.livepeerIngestUrl = undefined;
-      });
-  }
-
-  private async runLivepeerForwarderLoop(outputDir: string, ingestUrl: string) {
-    const manifestPath = path.join(outputDir, "index.m3u8");
-
-    while (!this.stopRequested && !this.livepeerStopRequested) {
-      const hasSegments = await manifestHasSegments(manifestPath);
-      if (!hasSegments) {
-        await sleep(300);
-        continue;
-      }
-
-      this.livepeerSession = await startRtmpForwarder(manifestPath, ingestUrl);
-      const result = await this.livepeerSession.finished;
-      this.livepeerSession = undefined;
-
-      if (this.stopRequested || this.livepeerStopRequested) {
-        break;
-      }
-
-      const failed = result.code !== 0 && result.signal !== "SIGTERM";
-      if (failed) {
-        await transaction((db) => {
-          const state = getOrCreatePlayoutState(db, this.channelId);
-          state.lastError = `Livepeer forwarder failed (${result.code}). ${result.stderr.slice(-200)}`;
-          state.updatedAt = nowIso();
-        });
-      }
-
-      await sleep(400);
-    }
-  }
-
   private async run() {
     const outputDir = path.join(HLS_ROOT, this.channelId);
     await resetChannelOutput(outputDir);
-    this.outputDir = outputDir;
     console.log(`[worker] channel ${this.channelId} playout loop started`);
 
     while (!this.stopRequested) {
@@ -327,11 +238,7 @@ class ChannelRuntime {
         break;
       }
       const livepeerConfig = getLivepeerConfig(db, this.channelId);
-      if (livepeerConfig?.enabled && livepeerConfig.ingestUrl) {
-        this.startLivepeerForwarder(outputDir, livepeerConfig.ingestUrl);
-      } else {
-        this.stopLivepeerForwarder();
-      }
+      const livepeerIngestUrl = livepeerConfig?.enabled ? livepeerConfig.ingestUrl : undefined;
 
       const next = chooseNextAsset(channel, state, db);
       if (!next) {
@@ -368,7 +275,8 @@ class ChannelRuntime {
         assetMediaKind: next.asset.mediaKind,
         radioBackgroundPath,
         startOffsetSec: next.playbackOffsetSec,
-        maxDurationSec: next.playbackDurationSec
+        maxDurationSec: next.playbackDurationSec,
+        livepeerIngestUrl
       });
       const result = await this.currentSession.finished;
       this.currentSession = undefined;
@@ -446,7 +354,6 @@ class ChannelRuntime {
       if (skipped) {
         // Drop stale buffered segments so clients jump to the next item as quickly as possible.
         await resetChannelOutput(outputDir);
-        this.stopLivepeerForwarder();
       }
 
       if (!postState.shouldContinue) {
@@ -466,13 +373,9 @@ class ChannelRuntime {
       liveState.updatedAt = nowIso();
     });
 
-    this.stopLivepeerForwarder();
-    await this.livepeerLoopPromise;
-
     this.stopRequested = false;
     this.skipRequested = false;
     this.previousRequested = false;
-    this.outputDir = undefined;
     console.log(`[worker] channel ${this.channelId} playout loop stopped`);
   }
 }
@@ -679,7 +582,6 @@ async function poll() {
     for (const channelId of activeChannels) {
       const runtime = runtimeFor(channelId);
       runtime.start();
-      runtime.syncLivepeer(getLivepeerConfig(db, channelId));
     }
 
     for (const [channelId, runtime] of runtimes.entries()) {

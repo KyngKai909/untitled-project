@@ -20,6 +20,7 @@ interface HlsSegmenterOptions {
   radioBackgroundPath?: string;
   startOffsetSec?: number;
   maxDurationSec?: number;
+  livepeerIngestUrl?: string;
 }
 
 export async function resetChannelOutput(outputDir: string): Promise<void> {
@@ -27,7 +28,7 @@ export async function resetChannelOutput(outputDir: string): Promise<void> {
   await fs.mkdir(outputDir, { recursive: true });
 }
 
-function sharedHlsArgs(segmentPattern: string, playlistPath: string): string[] {
+function sharedEncoderArgs(): string[] {
   return [
     "-c:v",
     "libx264",
@@ -46,7 +47,12 @@ function sharedHlsArgs(segmentPattern: string, playlistPath: string): string[] {
     "-ac",
     "2",
     "-b:a",
-    "128k",
+    "128k"
+  ];
+}
+
+function sharedHlsArgs(segmentPattern: string, playlistPath: string): string[] {
+  return [
     "-f",
     "hls",
     "-hls_time",
@@ -63,6 +69,18 @@ function sharedHlsArgs(segmentPattern: string, playlistPath: string): string[] {
     segmentPattern,
     playlistPath
   ];
+}
+
+function sharedHlsTeeTarget(segmentPattern: string, playlistPath: string): string {
+  return [
+    "[f=hls",
+    "hls_time=2",
+    "hls_list_size=6",
+    "hls_delete_threshold=1",
+    "hls_start_number_source=epoch",
+    "hls_flags=delete_segments+omit_endlist+independent_segments+program_date_time+temp_file",
+    `hls_segment_filename=${segmentPattern}]${playlistPath}`
+  ].join(":");
 }
 
 function looksAnimatedBackground(filePath: string | undefined): boolean {
@@ -92,6 +110,11 @@ export async function startHlsSegmenter(
   const backgroundPath = options.radioBackgroundPath;
   const startOffsetSec = formatFfmpegSeconds(options.startOffsetSec);
   const maxDurationSec = formatFfmpegSeconds(options.maxDurationSec);
+  const livepeerIngestUrl = options.livepeerIngestUrl?.trim();
+  const livepeerEnabled = Boolean(livepeerIngestUrl);
+  const outputArgs = livepeerEnabled
+    ? ["-f", "tee", `${sharedHlsTeeTarget(segmentPattern, playlistPath)}|[f=flv]${livepeerIngestUrl}`]
+    : sharedHlsArgs(segmentPattern, playlistPath);
 
   const args = shouldRenderRadioCanvas
     ? [
@@ -117,7 +140,8 @@ export async function startHlsSegmenter(
         "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p,fps=30",
         "-tune",
         "stillimage",
-        ...sharedHlsArgs(segmentPattern, playlistPath)
+        ...sharedEncoderArgs(),
+        ...outputArgs
       ]
     : [
         "-hide_banner",
@@ -130,50 +154,9 @@ export async function startHlsSegmenter(
         ...(maxDurationSec ? ["-t", maxDurationSec] : []),
         "-tune",
         "zerolatency",
-        ...sharedHlsArgs(segmentPattern, playlistPath)
+        ...sharedEncoderArgs(),
+        ...outputArgs
       ];
-
-  const process = spawn("ffmpeg", args, {
-    stdio: ["ignore", "ignore", "pipe"]
-  });
-
-  let stderr = "";
-  process.stderr.on("data", (chunk: Buffer) => {
-    stderr += chunk.toString();
-    if (stderr.length > 4000) {
-      stderr = stderr.slice(-4000);
-    }
-  });
-
-  const finished = new Promise<FfmpegSessionResult>((resolve) => {
-    process.on("close", (code, signal) => {
-      resolve({ code: code ?? 1, signal, stderr });
-    });
-
-    process.on("error", (error) => {
-      resolve({ code: 1, signal: null, stderr: String(error) });
-    });
-  });
-
-  return { process, finished };
-}
-
-export async function startRtmpForwarder(inputManifestPath: string, outputRtmpUrl: string): Promise<FfmpegSession> {
-  const args = [
-    "-hide_banner",
-    "-loglevel",
-    "warning",
-    "-re",
-    "-fflags",
-    "+genpts",
-    "-i",
-    inputManifestPath,
-    "-c",
-    "copy",
-    "-f",
-    "flv",
-    outputRtmpUrl
-  ];
 
   const process = spawn("ffmpeg", args, {
     stdio: ["ignore", "ignore", "pipe"]
