@@ -179,6 +179,214 @@ select {
   background: var(--accent);
 }
 
+.authShell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.authTopbar {
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--bg);
+}
+
+.authTopbar__inner {
+  width: min(1520px, 100%);
+  margin: 0 auto;
+  padding: 0 1rem;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.authBrand {
+  pointer-events: none;
+}
+
+.authLayout {
+  width: min(1520px, 100%);
+  margin: 0 auto;
+  min-height: calc(100vh - 73px);
+  border-left: 1px solid var(--line-strong);
+  border-right: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(420px, 0.9fr);
+  background: var(--line-strong);
+  gap: 1px;
+}
+
+.authIntro,
+.authPanel {
+  min-width: 0;
+  background: var(--surface-strong);
+  display: grid;
+  align-content: start;
+}
+
+.authIntro {
+  border-right: 1px solid var(--line);
+  padding: clamp(1rem, 2.3vw, 1.6rem);
+  gap: 1.2rem;
+}
+
+.authIntro__top {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.authIntro h1 {
+  margin: 0;
+  font-size: clamp(1.55rem, 3vw, 2.45rem);
+  line-height: 1.08;
+}
+
+.authIntro p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.97rem;
+  max-width: 68ch;
+}
+
+.authSignal {
+  border: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: var(--surface);
+}
+
+.authSignal article {
+  border-right: 1px solid var(--line);
+  padding: 0.84rem 0.9rem;
+  min-width: 0;
+}
+
+.authSignal article:last-child {
+  border-right: 0;
+}
+
+.authSignal h4 {
+  margin: 0;
+  font-family: "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.authSignal p {
+  margin: 0.38rem 0 0;
+  font-size: 0.94rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.authPanel {
+  padding: clamp(1rem, 2.3vw, 1.6rem);
+  gap: 0.9rem;
+}
+
+.authModeSwitch {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.authModeSwitch button {
+  min-height: 46px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+}
+
+.authModeSwitch button:last-child {
+  border-right: 0;
+}
+
+.authModeSwitch button[data-active="true"] {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.authPanel__head {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.84rem;
+}
+
+.authPanel__head h2 {
+  margin: 0;
+  font-size: clamp(1.3rem, 2vw, 1.66rem);
+  line-height: 1.12;
+}
+
+.authPanel__head p {
+  margin: 0.45rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.authMethods {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.authMethod {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  min-height: 66px;
+  width: 100%;
+  padding: 0.74rem 0.84rem;
+  display: grid;
+  gap: 0.18rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.authMethod:disabled {
+  background: color-mix(in oklab, var(--surface) 86%, var(--line));
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.authMethod--active {
+  border-color: color-mix(in oklab, var(--accent) 52%, var(--line));
+  background: color-mix(in oklab, var(--accent-soft) 48%, var(--surface-strong));
+}
+
+.authMethod__label {
+  font-size: 0.94rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.authMethod__meta {
+  font-size: 0.79rem;
+  color: var(--text-muted);
+}
+
+.authHint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.authSession {
+  border-top: 1px solid var(--line);
+  padding-top: 0.9rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
 .routeFrame {
   width: min(1520px, 100%);
   margin: 0 auto;
@@ -1160,6 +1368,28 @@ a.uiButton {
     min-height: auto;
   }
 
+  .authLayout {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .authIntro {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .authSignal {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .authSignal article:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .authSignal article:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+
   .workspaceRail {
     display: none;
   }
@@ -1210,6 +1440,11 @@ a.uiButton {
     padding-bottom: 0.45rem;
   }
 
+  .authTopbar__inner {
+    min-height: 64px;
+    padding: 0 0.75rem;
+  }
+
   .topnav {
     grid-column: 1 / -1;
     justify-self: stretch;
@@ -1226,6 +1461,24 @@ a.uiButton {
 
   .routeFrame--workspace {
     padding: 0;
+  }
+
+  .authLayout {
+    border-left: 0;
+    border-right: 0;
+  }
+
+  .authSignal {
+    grid-template-columns: 1fr;
+  }
+
+  .authSignal article {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .authSignal article:last-child {
+    border-bottom: 0;
   }
 
   .dataRow {

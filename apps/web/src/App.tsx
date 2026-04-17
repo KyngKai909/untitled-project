@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import AppHeader from "./components/AppHeader";
 import CreatorDashboardPage from "./pages/CreatorDashboardPage";
 import LoginPage from "./pages/LoginPage";
@@ -17,7 +17,9 @@ function readInitialTheme(): "light" | "dark" {
 }
 
 export default function App() {
+  const location = useLocation();
   const [theme, setTheme] = useState<"light" | "dark">(() => readInitialTheme());
+  const isAuthRoute = location.pathname === "/";
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -26,10 +28,12 @@ export default function App() {
 
   return (
     <div className="appRoot">
-      <AppHeader
-        theme={theme}
-        onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
-      />
+      {!isAuthRoute ? (
+        <AppHeader
+          theme={theme}
+          onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+        />
+      ) : null}
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/dashboard" element={<CreatorDashboardPage />} />
