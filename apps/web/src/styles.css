@@ -9,8 +9,8 @@
   --surface-strong: #ffffff;
   --text: #111111;
   --text-muted: #505050;
-  --line: #c7c7c7;
-  --line-strong: #8e8e8e;
+  --line: #d2d2d2;
+  --line-strong: #b8b8b8;
   --accent: #2f6fff;
   --accent-soft: #dde7ff;
   --accent-alt: #ff5a2a;
@@ -27,8 +27,8 @@
   --surface-strong: #1b1b1b;
   --text: #f1f1f1;
   --text-muted: #b7b7b7;
-  --line: #2e2e2e;
-  --line-strong: #505050;
+  --line: #292929;
+  --line-strong: #404040;
   --accent: #5f91ff;
   --accent-soft: #1a2a49;
   --accent-alt: #ff7c56;
@@ -90,6 +90,7 @@ select {
 
 .appRoot {
   min-height: 100vh;
+  background: var(--bg);
 }
 
 .topbar {
@@ -103,55 +104,68 @@ select {
 .topbar__inner {
   width: min(1520px, 100%);
   margin: 0 auto;
-  padding: 0 1rem;
-  min-height: 70px;
+  padding: 0 0.85rem;
+  min-height: 58px;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 1.2rem;
+  gap: 0.7rem;
 }
 
 .brandLockup {
-  display: inline-grid;
-  grid-template-columns: auto auto;
+  display: inline-flex;
   align-items: center;
-  column-gap: 0.58rem;
+  gap: 0.52rem;
   text-decoration: none;
+  min-width: 0;
 }
 
 .brandLockup__glyph {
-  width: 0.9rem;
-  height: 0.9rem;
+  width: 0.82rem;
+  height: 0.82rem;
   border: 2px solid var(--text);
   background: linear-gradient(135deg, var(--accent), var(--accent-alt));
 }
 
 .brandLockup__title {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   letter-spacing: 0.01em;
   font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .brandLockup__subtitle {
-  grid-column: 2;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   letter-spacing: 0.03em;
   color: var(--text-muted);
   font-family: "General Sans", "Onest", "Segoe UI", sans-serif;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--line);
+  white-space: nowrap;
 }
 
 .topnav {
   display: inline-flex;
   justify-self: center;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
   border: 1px solid var(--line);
   background: var(--surface);
 }
 
+.topnav::-webkit-scrollbar {
+  display: none;
+}
+
 .topnav__link {
-  padding: 0.7rem 1rem;
+  padding: 0.52rem 0.84rem;
+  min-height: 36px;
   border-right: 1px solid var(--line);
   text-decoration: none;
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   letter-spacing: 0.01em;
   font-weight: 500;
   font-family: "General Sans", "Onest", "Segoe UI", sans-serif;
@@ -178,18 +192,18 @@ select {
 .themeSwitch {
   display: inline-flex;
   align-items: center;
-  justify-self: end;
   gap: 0.48rem;
-  min-height: 40px;
+  min-height: 36px;
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--text);
-  padding: 0.45rem 0.72rem;
+  padding: 0.34rem 0.58rem;
   cursor: pointer;
   letter-spacing: 0.01em;
   font-family: "General Sans", "Onest", "Segoe UI", sans-serif;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 500;
+  flex: 0 0 auto;
 }
 
 .themeSwitch:hover {
@@ -217,12 +231,12 @@ select {
 .authTopbar__inner {
   width: min(1520px, 100%);
   margin: 0 auto;
-  padding: 0 1rem;
-  min-height: 72px;
+  padding: 0 0.85rem;
+  min-height: 58px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.7rem;
 }
 
 .authBrand {
@@ -232,14 +246,14 @@ select {
 .authLayout {
   width: min(1520px, 100%);
   margin: 0 auto;
-  min-height: calc(100vh - 73px);
+  min-height: calc(100vh - 59px);
   border-left: 1px solid var(--line-strong);
   border-right: 1px solid var(--line-strong);
   border-bottom: 1px solid var(--line-strong);
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(420px, 0.9fr);
-  background: var(--line-strong);
-  gap: 1px;
+  background: var(--bg);
+  gap: 0;
 }
 
 .authIntro,
@@ -591,9 +605,9 @@ a.uiButton {
 .workspaceGrid,
 .opsGrid {
   border: 1px solid var(--line-strong);
-  background: var(--line-strong);
+  background: var(--bg);
   display: grid;
-  gap: 1px;
+  gap: 0;
 }
 
 .workspaceGrid {
@@ -602,6 +616,11 @@ a.uiButton {
 
 .opsGrid {
   grid-template-columns: minmax(250px, 1fr) minmax(0, 2.2fr) minmax(280px, 1fr);
+}
+
+.workspaceGrid > .workspacePane + .workspacePane,
+.opsGrid > .opsPane + .opsPane {
+  border-left: 1px solid var(--line);
 }
 
 .workspacePane,
@@ -1065,17 +1084,17 @@ a.uiButton {
 
 .watchGrid {
   border: 1px solid var(--line-strong);
-  background: var(--line-strong);
+  background: var(--bg);
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
-  gap: 1px;
+  gap: 0;
 }
 
 .watchMainColumn {
-  background: var(--line-strong);
+  background: var(--bg);
   min-width: 0;
   display: grid;
-  gap: 1px;
+  gap: 0;
 }
 
 .watchPanel {
@@ -1110,10 +1129,16 @@ a.uiButton {
 }
 
 .watchRail {
-  background: var(--line-strong);
+  border-left: 1px solid var(--line);
+  background: var(--bg);
   display: grid;
   align-content: start;
-  gap: 1px;
+  gap: 0;
+}
+
+.watchMainColumn > .watchPanel + .watchPanel,
+.watchRail > .watchPanel + .watchPanel {
+  border-top: 1px solid var(--line);
 }
 
 .guideTable {
@@ -1261,10 +1286,10 @@ a.uiButton {
 
 .previewGrid {
   border: 1px solid var(--line-strong);
-  background: var(--line-strong);
+  background: var(--bg);
   display: grid;
   grid-template-columns: minmax(0, 1fr) 350px;
-  gap: 1px;
+  gap: 0;
 }
 
 .previewMain,
@@ -1273,6 +1298,10 @@ a.uiButton {
   min-height: 560px;
   display: grid;
   grid-template-rows: auto 1fr;
+}
+
+.previewRail {
+  border-left: 1px solid var(--line);
 }
 
 .previewMain .paneBody,
@@ -1398,8 +1427,8 @@ a.uiButton {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   min-height: calc(100vh - 72px);
-  background: var(--line-strong);
-  gap: 1px;
+  background: var(--bg);
+  gap: 0;
 }
 
 .workspaceShell--manager {
@@ -1407,7 +1436,7 @@ a.uiButton {
 }
 
 .workspaceRail {
-  background: var(--surface-strong);
+  background: var(--bg);
   min-width: 0;
   display: grid;
   align-content: start;
@@ -1415,10 +1444,13 @@ a.uiButton {
 }
 
 .railBlock {
-  border-bottom: 1px solid var(--line);
   padding: 1rem;
   display: grid;
   gap: 0.78rem;
+}
+
+.workspaceRail > .railBlock + .railBlock {
+  border-top: 1px solid var(--line);
 }
 
 .railBlock__head h3 {
@@ -1498,7 +1530,7 @@ a.uiButton {
 }
 
 .workspaceMain {
-  background: var(--surface-strong);
+  background: var(--bg);
   min-width: 0;
   display: grid;
   grid-template-rows: auto auto 1fr;
@@ -1584,17 +1616,17 @@ a.uiButton {
   overflow: auto;
   display: grid;
   align-content: start;
-  background: var(--line);
-  gap: 1px;
+  background: var(--bg);
+  gap: 0;
 }
 
 .workspaceSection {
-  background: var(--surface-strong);
+  background: var(--bg);
   display: grid;
 }
 
-.workspaceSection:last-child {
-  border-bottom: 0;
+.workspaceContent > .workspaceSection + .workspaceSection {
+  border-top: 1px solid var(--line);
 }
 
 .workspaceSection__head {
@@ -1776,11 +1808,22 @@ a.uiButton {
     grid-template-columns: 1fr;
   }
 
+  .workspaceGrid > .workspacePane + .workspacePane,
+  .opsGrid > .opsPane + .opsPane {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
   .workspacePane,
   .opsPane,
   .previewMain,
   .previewRail {
     min-height: auto;
+  }
+
+  .previewRail {
+    border-left: 0;
+    border-top: 1px solid var(--line);
   }
 
   .watchNow__top {
@@ -1875,29 +1918,67 @@ a.uiButton {
   .watchGrid {
     grid-template-columns: 1fr;
   }
+
+  .watchRail {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+}
+
+@media (max-width: 1180px) {
+  .brandLockup__subtitle {
+    display: none;
+  }
 }
 
 @media (max-width: 920px) {
   .topbar__inner {
-    grid-template-columns: 1fr auto;
-    row-gap: 0.55rem;
-    padding-top: 0.45rem;
-    padding-bottom: 0.45rem;
+    min-height: 50px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.45rem;
+    padding: 0 0.55rem;
   }
 
   .authTopbar__inner {
-    min-height: 64px;
-    padding: 0 0.75rem;
+    min-height: 50px;
+    padding: 0 0.55rem;
   }
 
   .topnav {
-    grid-column: 1 / -1;
     justify-self: stretch;
   }
 
   .topnav__link {
-    flex: 1;
+    flex: 0 0 auto;
     text-align: center;
+    min-height: 32px;
+    padding: 0.42rem 0.62rem;
+    font-size: 0.76rem;
+  }
+
+  .brandLockup__glyph {
+    width: 0.74rem;
+    height: 0.74rem;
+  }
+
+  .brandLockup__title {
+    font-size: 0.84rem;
+  }
+
+  .brandLockup__subtitle {
+    display: none;
+  }
+
+  .themeSwitch {
+    min-height: 32px;
+    padding: 0.28rem 0.5rem;
+    gap: 0.34rem;
+    font-size: 0.72rem;
+  }
+
+  .themeSwitch__dot {
+    width: 0.5rem;
+    height: 0.5rem;
   }
 
   .routeFrame {
@@ -1943,6 +2024,7 @@ a.uiButton {
   }
 
   .authLayout {
+    min-height: calc(100vh - 51px);
     border-left: 0;
     border-right: 0;
   }
