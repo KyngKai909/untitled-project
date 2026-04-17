@@ -542,7 +542,7 @@ a.uiButton {
   border-bottom: 1px solid var(--line);
   padding: 0.86rem 0.9rem;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.8rem;
 }
@@ -551,16 +551,22 @@ a.uiButton {
   border-bottom: 0;
 }
 
+.dataRow > :first-child {
+  min-width: 0;
+}
+
 .dataRow__title {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .dataRow__meta {
   margin: 0.28rem 0 0;
   color: var(--text-muted);
   font-size: 0.88rem;
+  overflow-wrap: anywhere;
 }
 
 .dataRow__actions {
@@ -778,11 +784,12 @@ a.uiButton {
 }
 
 .workspaceShell--manager {
-  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
 }
 
 .workspaceRail {
   border-right: 1px solid var(--line);
+  background: var(--surface);
   min-width: 0;
   display: grid;
   align-content: start;
@@ -806,6 +813,41 @@ a.uiButton {
   margin: 0.36rem 0 0;
   color: var(--text-muted);
   font-size: 0.88rem;
+}
+
+.railStats {
+  margin: 0;
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+  display: grid;
+  min-width: 0;
+}
+
+.railStats > div {
+  border-bottom: 1px solid var(--line);
+  padding: 0.72rem 0.78rem;
+  display: grid;
+  gap: 0.28rem;
+}
+
+.railStats > div:last-child {
+  border-bottom: 0;
+}
+
+.railStats dt {
+  margin: 0;
+  font-size: 0.66rem;
+  font-family: "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.railStats dd {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .railNav {

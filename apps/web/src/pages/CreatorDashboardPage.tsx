@@ -267,41 +267,10 @@ export default function CreatorDashboardPage() {
 
       <section className="railBlock">
         <div className="railBlock__head">
-          <h3>Quick Actions</h3>
-          <p>Create assets and stations without leaving context.</p>
-        </div>
-        <div className="stackActions">
-          <button
-            className="uiButton uiButton--accent"
-            type="button"
-            onClick={() => {
-              setCreateModalOpen(true);
-              setRailOpen(false);
-            }}
-          >
-            New Station
-          </button>
-          <button
-            className="uiButton uiButton--secondary"
-            type="button"
-            onClick={() => {
-              setUploadModalOpen(true);
-              setRailOpen(false);
-            }}
-          >
-            Upload Media
-          </button>
-        </div>
-      </section>
-
-      <section className="railBlock">
-        <div className="railBlock__head">
           <h3>Session</h3>
           <p>{formatWalletAddress(ownerWallet)}</p>
         </div>
-        <button className="uiButton uiButton--danger" type="button" onClick={onDisconnectWallet}>
-          Disconnect Wallet
-        </button>
+        <p className="emptyState">Session controls are available in the Account section.</p>
       </section>
     </>
   );
@@ -323,12 +292,16 @@ export default function CreatorDashboardPage() {
               </p>
             </div>
             <div className="workspaceHead__actions">
-              <button className="uiButton uiButton--accent" type="button" onClick={() => setCreateModalOpen(true)}>
-                New Station
-              </button>
-              <button className="uiButton uiButton--secondary" type="button" onClick={() => setUploadModalOpen(true)}>
-                Upload Media
-              </button>
+              {section === "stations" ? (
+                <button className="uiButton uiButton--accent" type="button" onClick={() => setCreateModalOpen(true)}>
+                  New Station
+                </button>
+              ) : null}
+              {section === "library" ? (
+                <button className="uiButton uiButton--accent" type="button" onClick={() => setUploadModalOpen(true)}>
+                  Upload Media
+                </button>
+              ) : null}
               <button className="uiButton uiButton--ghost mobileOnly" type="button" onClick={() => setRailOpen(true)}>
                 Open Navigation
               </button>
@@ -408,14 +381,9 @@ export default function CreatorDashboardPage() {
                     <h2>Global Media Library</h2>
                     <p>Wallet-scoped assets ready for import across all stations.</p>
                   </div>
-                  <div className="workspaceHead__actions">
-                    <button className="uiButton uiButton--accent" type="button" onClick={() => setUploadModalOpen(true)}>
-                      Upload
-                    </button>
-                    <button className="uiButton uiButton--secondary" type="button" onClick={() => void refreshLibrary()} disabled={loadingLibrary}>
-                      {loadingLibrary ? "Refreshing" : "Refresh"}
-                    </button>
-                  </div>
+                  <button className="uiButton uiButton--secondary" type="button" onClick={() => void refreshLibrary()} disabled={loadingLibrary}>
+                    {loadingLibrary ? "Refreshing" : "Refresh"}
+                  </button>
                 </header>
                 <div className="workspaceSection__body">
                   {libraryAssets.length === 0 ? <p className="emptyState">No assets uploaded yet.</p> : null}

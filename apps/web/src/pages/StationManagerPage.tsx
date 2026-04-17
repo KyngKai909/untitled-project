@@ -675,66 +675,43 @@ export default function StationManagerPage() {
     <>
       <section className="railBlock">
         <div className="railBlock__head">
-          <h3>Station Actions</h3>
-          <p>Primary live control actions.</p>
+          <h3>Station Snapshot</h3>
+          <p>{detail ? `${detail.channel.streamMode.toUpperCase()} mode` : "Loading profile"}</p>
         </div>
-        <div className="stackActions">
-          <Link className="uiButton uiButton--secondary" to="/dashboard">Back to Workspace</Link>
-          <Link className="uiButton uiButton--secondary" to={`/stations/${channelId}/preview`}>Preview Feed</Link>
-          <button className="uiButton uiButton--accent" type="button" onClick={() => void onControl("start")} disabled={busy}>
-            Go Live
-          </button>
-          <button className="uiButton uiButton--danger" type="button" onClick={() => void onControl("stop")} disabled={busy}>
-            Stop
-          </button>
-          <button className="uiButton uiButton--secondary" type="button" onClick={() => void onControl("previous")} disabled={busy}>
-            Previous
-          </button>
-          <button className="uiButton uiButton--secondary" type="button" onClick={() => void onControl("skip")} disabled={busy}>
-            Skip
-          </button>
-        </div>
+        <dl className="railStats">
+          <div>
+            <dt>Status</dt>
+            <dd>{detail?.state.isRunning ? "Live" : "Off Air"}</dd>
+          </div>
+          <div>
+            <dt>Output Route</dt>
+            <dd>{monitorStats.route}</dd>
+          </div>
+          <div>
+            <dt>Queue Depth</dt>
+            <dd>{monitorStats.queueDepth}</dd>
+          </div>
+          <div>
+            <dt>Schedules</dt>
+            <dd>{monitorStats.schedules}</dd>
+          </div>
+        </dl>
       </section>
 
       <section className="railBlock">
         <div className="railBlock__head">
-          <h3>Output</h3>
+          <h3>Output Endpoint</h3>
           <p className="wrapAnywhere">{streamUrl || "No stream URL yet"}</p>
         </div>
-        <div className="stackActions">
-          <button className="uiButton uiButton--secondary" type="button" onClick={() => void onProvisionLivepeer()} disabled={busy}>
-            Provision Livepeer
-          </button>
-          <button
-            className="uiButton uiButton--secondary"
-            type="button"
-            onClick={() => void onToggleLivepeer(!(detail?.livepeer?.enabled ?? false))}
-            disabled={busy}
-          >
-            {detail?.livepeer?.enabled ? "Disable Livepeer" : "Enable Livepeer"}
-          </button>
-        </div>
+        <p className="emptyState">Routing controls live in the Monitor tab.</p>
       </section>
 
       <section className="railBlock">
         <div className="railBlock__head">
-          <h3>Workflow Modals</h3>
-          <p>Open high-focus forms without overcrowding the workspace.</p>
+          <h3>Now Playing</h3>
+          <p className="wrapAnywhere">{timeline.current?.title ?? "No active segment"}</p>
         </div>
-        <div className="stackActions">
-          <button className="uiButton uiButton--secondary" type="button" onClick={() => setScheduleModalOpen(true)}>
-            Create Schedule
-          </button>
-          <button className="uiButton uiButton--secondary" type="button" onClick={() => setImportProgramsModalOpen(true)}>
-            Import Programs
-          </button>
-          <button className="uiButton uiButton--secondary" type="button" onClick={() => setImportAdsModalOpen(true)}>
-            Import Ads
-          </button>
-          <button className="uiButton uiButton--accent" type="button" onClick={() => void onStartAlwaysOnNow()} disabled={busy}>
-            Start 24/7 Now
-          </button>
-        </div>
+        <p className="metaLine">Remaining: {timeline.remainingSec !== undefined ? formatDuration(timeline.remainingSec) : "--:--"}</p>
       </section>
     </>
   );
@@ -765,11 +742,25 @@ export default function StationManagerPage() {
               ) : null}
             </div>
             <div className="workspaceHead__actions">
+              <Link className="uiButton uiButton--secondary" to="/dashboard">
+                Workspace
+              </Link>
+              <Link className="uiButton uiButton--secondary" to={`/stations/${channelId}/preview`}>
+                Preview Feed
+              </Link>
               <button className="uiButton uiButton--secondary" type="button" onClick={() => void refresh()} disabled={loading}>
                 {loading ? "Refreshing" : "Refresh"}
               </button>
+              <button
+                className={`uiButton ${detail?.state.isRunning ? "uiButton--danger" : "uiButton--accent"}`}
+                type="button"
+                onClick={() => void onControl(detail?.state.isRunning ? "stop" : "start")}
+                disabled={busy || loading || !detail}
+              >
+                {detail?.state.isRunning ? "Stop Stream" : "Go Live"}
+              </button>
               <button className="uiButton uiButton--ghost mobileOnly" type="button" onClick={() => setRailOpen(true)}>
-                Open Actions
+                Open Snapshot
               </button>
             </div>
           </header>
@@ -833,6 +824,19 @@ export default function StationManagerPage() {
                       <h2>Live Output Monitor</h2>
                       <p>Real-time feed view using Livepeer when enabled, otherwise HLS stream.</p>
                     </div>
+                    <div className="workspaceHead__actions">
+                      <button className="uiButton uiButton--secondary" type="button" onClick={() => void onProvisionLivepeer()} disabled={busy}>
+                        Provision Livepeer
+                      </button>
+                      <button
+                        className="uiButton uiButton--secondary"
+                        type="button"
+                        onClick={() => void onToggleLivepeer(!(detail.livepeer?.enabled ?? false))}
+                        disabled={busy}
+                      >
+                        {detail.livepeer?.enabled ? "Disable Livepeer" : "Enable Livepeer"}
+                      </button>
+                    </div>
                   </header>
                   <div className="workspaceSection__body">
                     {livepeerEmbedUrl ? (
@@ -856,6 +860,14 @@ export default function StationManagerPage() {
                     <div>
                       <h2>Timeline</h2>
                       <p>Current progress and sequence context for playout.</p>
+                    </div>
+                    <div className="workspaceHead__actions">
+                      <button className="uiButton uiButton--secondary" type="button" onClick={() => void onControl("previous")} disabled={busy}>
+                        Previous
+                      </button>
+                      <button className="uiButton uiButton--secondary" type="button" onClick={() => void onControl("skip")} disabled={busy}>
+                        Skip
+                      </button>
                     </div>
                   </header>
                   <div className="workspaceSection__body">
@@ -1162,7 +1174,7 @@ export default function StationManagerPage() {
         </section>
       </section>
 
-      <OverlayPanel open={railOpen} onClose={() => setRailOpen(false)} title="Station Actions" mode="left">
+      <OverlayPanel open={railOpen} onClose={() => setRailOpen(false)} title="Station Snapshot" mode="left">
         {rail}
       </OverlayPanel>
 
