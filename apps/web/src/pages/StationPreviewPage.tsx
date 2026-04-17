@@ -342,57 +342,60 @@ export default function StationPreviewPage() {
         <section className="watchMainColumn">
           <section className="watchBroadcast">
             <div className="watchBroadcast__player">
-              {initialLoading && !detail ? (
-                <p className="loadingState">Loading broadcast...</p>
-              ) : livepeerEmbedUrl ? (
-                <div className="mediaShell">
-                  <iframe
-                    src={livepeerEmbedUrl}
-                    title="Livepeer Player"
-                    allow="autoplay; fullscreen; picture-in-picture"
-                  />
-                </div>
-              ) : stableStreamUrl || streamUrl ? (
-                <HlsPlayer src={stableStreamUrl || streamUrl} muted={false} />
-              ) : (
-                <p className="emptyState">No stream URL available yet.</p>
-              )}
+              <div className="watchPlayerFrame">
+                {initialLoading && !detail ? (
+                  <p className="loadingState">Loading broadcast...</p>
+                ) : livepeerEmbedUrl ? (
+                  <div className="mediaShell">
+                    <iframe
+                      src={livepeerEmbedUrl}
+                      title="Livepeer Player"
+                      allow="autoplay; fullscreen; picture-in-picture"
+                    />
+                  </div>
+                ) : stableStreamUrl || streamUrl ? (
+                  <HlsPlayer src={stableStreamUrl || streamUrl} muted={false} />
+                ) : (
+                  <p className="emptyState">No stream URL available yet.</p>
+                )}
+              </div>
             </div>
 
-            <header className="watchBroadcast__head">
-              <div className="watchBroadcast__title">
-                <div className="pageBanner__meta">
-                  <span className="miniTag miniTag--accent">Public Stream Viewer</span>
-                  {detail ? (
-                    <span className={`statusPill ${detail.state.isRunning ? "statusPill--live" : "statusPill--off"}`}>
-                      {detail.state.isRunning ? "Live" : "Off Air"}
-                    </span>
-                  ) : (
-                    <span className="statusPill">Connecting</span>
-                  )}
-                  {refreshing ? <span className="miniTag">Refreshing</span> : null}
-                </div>
-                <h1>{detail?.channel.name ?? "Loading Broadcast"}</h1>
-                <p>
-                  {detail?.channel.description?.trim() ||
-                    "Share this page for viewers to watch live playback, track what is on now, and follow the lineup guide."}
-                </p>
-              </div>
-              <div className="watchBroadcast__actions">
-                <button className="uiButton uiButton--accent" type="button" onClick={() => void onCopyShareLink()}>
-                  Share Stream
-                </button>
-                <Link className="uiButton uiButton--secondary" to={`/stations/${channelId}`}>
-                  Open Studio
-                </Link>
-                <Link className="uiButton uiButton--secondary" to="/dashboard">
-                  Workspace
-                </Link>
-              </div>
-            </header>
-
             <section className="watchNow">
-              <div className="watchNow__title">
+              <div className="watchNow__top">
+                <div className="watchNow__identity">
+                  <div className="pageBanner__meta">
+                    <span className="miniTag miniTag--accent">Public Stream Viewer</span>
+                    {detail ? (
+                      <span className={`statusPill ${detail.state.isRunning ? "statusPill--live" : "statusPill--off"}`}>
+                        {detail.state.isRunning ? "Live" : "Off Air"}
+                      </span>
+                    ) : (
+                      <span className="statusPill">Connecting</span>
+                    )}
+                    {refreshing ? <span className="miniTag">Refreshing</span> : null}
+                  </div>
+                  <h1>{detail?.channel.name ?? "Loading Broadcast"}</h1>
+                  <p>
+                    {detail?.channel.description?.trim() ||
+                      "Share this page for viewers to watch live playback, track what is on now, and follow the lineup guide."}
+                  </p>
+                </div>
+                <div className="watchNow__actions">
+                  <button className="uiButton uiButton--accent" type="button" onClick={() => void onCopyShareLink()}>
+                    Share Stream
+                  </button>
+                  <Link className="uiButton uiButton--secondary" to={`/stations/${channelId}`}>
+                    Open Studio
+                  </Link>
+                  <Link className="uiButton uiButton--secondary" to="/dashboard">
+                    Workspace
+                  </Link>
+                </div>
+              </div>
+
+              <div className="watchNow__playing">
+                <p className="watchNow__kicker">Now Playing</p>
                 <h2>{detail?.state.currentAssetTitle ?? nowPlaying?.asset.title ?? "No Program Live Right Now"}</h2>
                 <p>
                   {nowPlaying?.durationSec
@@ -402,6 +405,7 @@ export default function StationPreviewPage() {
                     : "Program timing appears when the playlist is active."}
                 </p>
               </div>
+
               <div className="watchNow__meter">
                 <p className="metaLine">
                   <span>Elapsed {formatDuration(playbackProgress.elapsedSec)}</span>
