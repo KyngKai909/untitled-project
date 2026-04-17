@@ -60,6 +60,27 @@ a {
   color: inherit;
 }
 
+.uiInline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.uiIcon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+}
+
+.uiIcon--rotate-up {
+  transform: rotate(90deg);
+}
+
+.uiIcon--rotate-down {
+  transform: rotate(-90deg);
+}
+
 button,
 input,
 textarea,
@@ -135,6 +156,9 @@ select {
   font-weight: 500;
   font-family: "General Sans", "Onest", "Segoe UI", sans-serif;
   color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .topnav__link:last-child {
@@ -346,7 +370,9 @@ select {
   width: 100%;
   padding: 0.74rem 0.84rem;
   display: grid;
-  gap: 0.18rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.68rem;
+  align-items: center;
   text-align: left;
   cursor: pointer;
 }
@@ -361,6 +387,22 @@ select {
 .authMethod--active {
   border-color: color-mix(in oklab, var(--accent) 52%, var(--line));
   background: color-mix(in oklab, var(--accent-soft) 48%, var(--surface-strong));
+}
+
+.authMethod__icon {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-strong);
+}
+
+.authMethod__content {
+  min-width: 0;
+  display: grid;
+  gap: 0.18rem;
 }
 
 .authMethod__label {
@@ -457,6 +499,7 @@ select {
   letter-spacing: 0.02em;
   font-family: "IBM Plex Mono", monospace;
   color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .statusPill--live {
@@ -487,6 +530,7 @@ a.uiButton {
   gap: 0.45rem;
   cursor: pointer;
   transition: transform 90ms ease, background-color 90ms ease, color 90ms ease;
+  white-space: nowrap;
 }
 
 .uiButton:hover {
@@ -519,6 +563,11 @@ a.uiButton {
 .uiButton--ghost {
   background: transparent;
   color: var(--text);
+}
+
+.uiButton--icon {
+  min-width: 42px;
+  padding: 0.58rem;
 }
 
 .inlineAlert {
@@ -782,6 +831,11 @@ a.uiButton {
   flex-wrap: wrap;
   gap: 0.5rem;
   justify-content: flex-end;
+  min-width: 0;
+}
+
+.dataRow__actions > * {
+  flex: 0 0 auto;
 }
 
 .checkTable {
@@ -1232,6 +1286,7 @@ a.uiButton {
   z-index: 200;
   background: var(--overlay);
   display: flex;
+  backdrop-filter: blur(2px);
 }
 
 .overlayPanel {
@@ -1240,10 +1295,11 @@ a.uiButton {
   max-height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr;
+  box-shadow: var(--shadow-soft);
 }
 
 .overlayPanel--center {
-  width: min(780px, calc(100vw - 1.5rem));
+  width: min(820px, calc(100vw - 1.5rem));
   max-height: calc(100vh - 1.5rem);
   margin: auto;
 }
@@ -1264,13 +1320,46 @@ a.uiButton {
   padding: 0.92rem 1rem;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.6rem;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-strong);
+}
+
+.overlayPanel__title {
+  min-width: 0;
+  display: grid;
+  gap: 0.34rem;
 }
 
 .overlayPanel__head h2 {
   margin: 0;
   font-size: 1.02rem;
+}
+
+.overlayPanel__title p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.overlayPanel__close {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.overlayPanel__close:hover {
+  border-color: var(--line-strong);
 }
 
 .overlayPanel__body {
@@ -1279,6 +1368,19 @@ a.uiButton {
   display: grid;
   gap: 0.92rem;
   align-content: start;
+  min-width: 0;
+}
+
+.modalActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.62rem;
+  justify-content: flex-end;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+  position: sticky;
+  bottom: -1rem;
+  background: linear-gradient(to top, var(--surface-strong) 70%, transparent);
 }
 
 .mobileOnly {
@@ -1296,7 +1398,8 @@ a.uiButton {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   min-height: calc(100vh - 72px);
-  background: var(--bg);
+  background: var(--line-strong);
+  gap: 1px;
 }
 
 .workspaceShell--manager {
@@ -1304,8 +1407,7 @@ a.uiButton {
 }
 
 .workspaceRail {
-  border-right: 1px solid var(--line);
-  background: var(--surface);
+  background: var(--surface-strong);
   min-width: 0;
   display: grid;
   align-content: start;
@@ -1382,6 +1484,8 @@ a.uiButton {
   font-size: 0.92rem;
   color: var(--text-muted);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
 }
 
 .railNav button:last-child {
@@ -1394,6 +1498,7 @@ a.uiButton {
 }
 
 .workspaceMain {
+  background: var(--surface-strong);
   min-width: 0;
   display: grid;
   grid-template-rows: auto auto 1fr;
@@ -1406,8 +1511,8 @@ a.uiButton {
 .workspaceHead {
   border-bottom: 1px solid var(--line);
   padding: 1rem 1.1rem;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: flex-start;
   gap: 0.9rem;
 }
@@ -1426,10 +1531,18 @@ a.uiButton {
 }
 
 .workspaceHead__actions {
+  min-width: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   gap: 0.52rem;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+  scrollbar-width: thin;
+}
+
+.workspaceHead__actions > * {
+  flex: 0 0 auto;
 }
 
 .summaryStrip {
@@ -1471,10 +1584,12 @@ a.uiButton {
   overflow: auto;
   display: grid;
   align-content: start;
+  background: var(--line);
+  gap: 1px;
 }
 
 .workspaceSection {
-  border-bottom: 1px solid var(--line);
+  background: var(--surface-strong);
   display: grid;
 }
 
@@ -1566,6 +1681,9 @@ a.uiButton {
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .managerTabs button:last-child {
@@ -1575,6 +1693,10 @@ a.uiButton {
 .managerTabs button[data-active="true"] {
   background: var(--text);
   color: var(--bg);
+}
+
+.managerTabs button .uiInline {
+  justify-content: center;
 }
 
 .managerSplit {
@@ -1812,6 +1934,14 @@ a.uiButton {
     grid-template-columns: 1fr;
   }
 
+  .modalActions {
+    justify-content: stretch;
+  }
+
+  .modalActions .uiButton {
+    flex: 1 1 180px;
+  }
+
   .authLayout {
     border-left: 0;
     border-right: 0;
@@ -1844,12 +1974,14 @@ a.uiButton {
 
   .workspaceHead {
     padding: 0.86rem 0.9rem;
-    flex-direction: column;
+    grid-template-columns: 1fr;
     align-items: stretch;
   }
 
   .workspaceHead__actions {
     justify-content: flex-start;
+    flex-wrap: wrap;
+    overflow-x: visible;
   }
 
   .workspaceSection__head,

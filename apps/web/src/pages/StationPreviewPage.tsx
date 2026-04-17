@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getApiBase, getChannelDetail, getChannelStatus } from "../api";
+import AppIcon from "../components/AppIcon";
 import HlsPlayer from "../components/HlsPlayer";
 import type { Asset, ChannelDetail } from "../types";
 
@@ -383,13 +384,12 @@ export default function StationPreviewPage() {
                 </div>
                 <div className="watchNow__actions">
                   <button className="uiButton uiButton--accent" type="button" onClick={() => void onCopyShareLink()}>
+                    <AppIcon name="upload" />
                     Share Stream
                   </button>
                   <Link className="uiButton uiButton--secondary" to={`/stations/${channelId}`}>
+                    <AppIcon name="monitor" />
                     Open Studio
-                  </Link>
-                  <Link className="uiButton uiButton--secondary" to="/dashboard">
-                    Workspace
                   </Link>
                 </div>
               </div>
@@ -444,6 +444,7 @@ export default function StationPreviewPage() {
               <div className="watchCommentComposer">
                 <input className="uiInput" value="Sign in required to comment (placeholder)." readOnly />
                 <button className="uiButton uiButton--secondary" type="button" disabled>
+                  <AppIcon name="send" />
                   Send
                 </button>
               </div>

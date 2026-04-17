@@ -15,6 +15,7 @@ import {
   sendChannelControl,
   setLivepeerEnabled
 } from "../api";
+import AppIcon from "../components/AppIcon";
 import HlsPlayer from "../components/HlsPlayer";
 import OverlayPanel from "../components/OverlayPanel";
 import type { Asset, ChannelDetail, StreamMode } from "../types";
@@ -743,33 +744,54 @@ export default function StationManagerPage() {
             </div>
             <div className="workspaceHead__actions">
               <Link className="uiButton uiButton--secondary" to="/dashboard">
+                <AppIcon name="home" />
                 Workspace
               </Link>
               <Link className="uiButton uiButton--secondary" to={`/stations/${channelId}/preview`}>
-                Preview Feed
+                <AppIcon name="eye" />
+                Viewer
               </Link>
-              <button className="uiButton uiButton--secondary" type="button" onClick={() => void refresh()} disabled={loading}>
-                {loading ? "Refreshing" : "Refresh"}
-              </button>
               <button
                 className={`uiButton ${detail?.state.isRunning ? "uiButton--danger" : "uiButton--accent"}`}
                 type="button"
                 onClick={() => void onControl(detail?.state.isRunning ? "stop" : "start")}
                 disabled={busy || loading || !detail}
               >
+                <AppIcon name={detail?.state.isRunning ? "stop" : "zap"} />
                 {detail?.state.isRunning ? "Stop Stream" : "Go Live"}
               </button>
               <button className="uiButton uiButton--ghost mobileOnly" type="button" onClick={() => setRailOpen(true)}>
-                Open Snapshot
+                <AppIcon name="menu" />
+                Snapshot
               </button>
             </div>
           </header>
 
           <nav className="managerTabs" aria-label="Station Workspace Tabs">
-            <button type="button" data-active={tab === "monitor"} onClick={() => setTab("monitor")}>Monitor</button>
-            <button type="button" data-active={tab === "playlist"} onClick={() => setTab("playlist")}>Playlist</button>
-            <button type="button" data-active={tab === "runtime"} onClick={() => setTab("runtime")}>Runtime</button>
-            <button type="button" data-active={tab === "ads"} onClick={() => setTab("ads")}>Ads</button>
+            <button type="button" data-active={tab === "monitor"} onClick={() => setTab("monitor")}>
+              <span className="uiInline">
+                <AppIcon name="monitor" />
+                Monitor
+              </span>
+            </button>
+            <button type="button" data-active={tab === "playlist"} onClick={() => setTab("playlist")}>
+              <span className="uiInline">
+                <AppIcon name="list" />
+                Playlist
+              </span>
+            </button>
+            <button type="button" data-active={tab === "runtime"} onClick={() => setTab("runtime")}>
+              <span className="uiInline">
+                <AppIcon name="clock" />
+                Runtime
+              </span>
+            </button>
+            <button type="button" data-active={tab === "ads"} onClick={() => setTab("ads")}>
+              <span className="uiInline">
+                <AppIcon name="megaphone" />
+                Ads
+              </span>
+            </button>
           </nav>
 
           <section className="workspaceContent">
@@ -826,6 +848,7 @@ export default function StationManagerPage() {
                     </div>
                     <div className="workspaceHead__actions">
                       <button className="uiButton uiButton--secondary" type="button" onClick={() => void onProvisionLivepeer()} disabled={busy}>
+                        <AppIcon name="plus" />
                         Provision Livepeer
                       </button>
                       <button
@@ -834,6 +857,7 @@ export default function StationManagerPage() {
                         onClick={() => void onToggleLivepeer(!(detail.livepeer?.enabled ?? false))}
                         disabled={busy}
                       >
+                        <AppIcon name={detail.livepeer?.enabled ? "stop" : "zap"} />
                         {detail.livepeer?.enabled ? "Disable Livepeer" : "Enable Livepeer"}
                       </button>
                     </div>
@@ -863,9 +887,11 @@ export default function StationManagerPage() {
                     </div>
                     <div className="workspaceHead__actions">
                       <button className="uiButton uiButton--secondary" type="button" onClick={() => void onControl("previous")} disabled={busy}>
+                        <AppIcon name="skip-prev" />
                         Previous
                       </button>
                       <button className="uiButton uiButton--secondary" type="button" onClick={() => void onControl("skip")} disabled={busy}>
+                        <AppIcon name="skip-next" />
                         Skip
                       </button>
                     </div>
@@ -922,6 +948,7 @@ export default function StationManagerPage() {
                     <p>Add programs, reorder queue, and push finalized sequence to playout.</p>
                   </div>
                   <button className="uiButton uiButton--secondary" type="button" onClick={() => setImportProgramsModalOpen(true)}>
+                    <AppIcon name="upload" />
                     Import Programs
                   </button>
                 </header>
@@ -946,6 +973,7 @@ export default function StationManagerPage() {
                                 </div>
                                 <div className="dataRow__actions">
                                   <button className="uiButton uiButton--secondary" type="button" onClick={() => addProgramToDraft(asset.id)} disabled={busy}>
+                                    <AppIcon name="plus" />
                                     Add
                                   </button>
                                 </div>
@@ -975,23 +1003,34 @@ export default function StationManagerPage() {
                                 </div>
                                 <div className="dataRow__actions">
                                   <button
-                                    className="uiButton uiButton--secondary"
+                                    className="uiButton uiButton--secondary uiButton--icon"
                                     type="button"
                                     disabled={busy || index === 0}
                                     onClick={() => moveDraftItem(index, -1)}
+                                    title="Move up"
+                                    aria-label="Move up"
                                   >
-                                    Up
+                                    <AppIcon name="arrow-left" className="uiIcon--rotate-up" />
                                   </button>
                                   <button
-                                    className="uiButton uiButton--secondary"
+                                    className="uiButton uiButton--secondary uiButton--icon"
                                     type="button"
                                     disabled={busy || index === queuePreview.length - 1}
                                     onClick={() => moveDraftItem(index, 1)}
+                                    title="Move down"
+                                    aria-label="Move down"
                                   >
-                                    Down
+                                    <AppIcon name="arrow-left" className="uiIcon--rotate-down" />
                                   </button>
-                                  <button className="uiButton uiButton--danger" type="button" disabled={busy} onClick={() => removeDraftItem(index)}>
-                                    Remove
+                                  <button
+                                    className="uiButton uiButton--danger uiButton--icon"
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => removeDraftItem(index)}
+                                    title="Remove"
+                                    aria-label="Remove"
+                                  >
+                                    <AppIcon name="trash" />
                                   </button>
                                 </div>
                               </article>
@@ -999,6 +1038,7 @@ export default function StationManagerPage() {
                           </div>
                         ) : null}
                         <button className="uiButton uiButton--accent" type="button" onClick={() => void onSaveQueue()} disabled={busy}>
+                          <AppIcon name="upload" />
                           Push Playlist
                         </button>
                       </div>
@@ -1018,9 +1058,11 @@ export default function StationManagerPage() {
                     </div>
                     <div className="workspaceHead__actions">
                       <button className="uiButton uiButton--secondary" type="button" onClick={() => setScheduleModalOpen(true)}>
+                        <AppIcon name="plus" />
                         Add Schedule
                       </button>
                       <button className="uiButton uiButton--accent" type="button" onClick={() => void onStartAlwaysOnNow()} disabled={busy}>
+                        <AppIcon name="zap" />
                         Start 24/7 Now
                       </button>
                     </div>
@@ -1058,6 +1100,7 @@ export default function StationManagerPage() {
                                   onClick={() => void onDeleteSchedule(schedule.id)}
                                   disabled={busy}
                                 >
+                                  <AppIcon name="trash" />
                                   Remove
                                 </button>
                               </div>
@@ -1130,6 +1173,7 @@ export default function StationManagerPage() {
                     ) : null}
 
                     <button className="uiButton uiButton--accent" type="button" onClick={() => void onSaveAdRules()} disabled={busy}>
+                      <AppIcon name="chart" />
                       Save Rules
                     </button>
                   </div>
@@ -1142,6 +1186,7 @@ export default function StationManagerPage() {
                       <p>Ad assets currently linked to this station.</p>
                     </div>
                     <button className="uiButton uiButton--secondary" type="button" onClick={() => setImportAdsModalOpen(true)}>
+                      <AppIcon name="upload" />
                       Import Ads
                     </button>
                   </header>
@@ -1159,6 +1204,7 @@ export default function StationManagerPage() {
                             </div>
                             <div className="dataRow__actions">
                               <button className="uiButton uiButton--danger" type="button" onClick={() => void onDeleteAsset(asset.id)} disabled={busy}>
+                                <AppIcon name="trash" />
                                 Remove
                               </button>
                             </div>
@@ -1178,7 +1224,13 @@ export default function StationManagerPage() {
         {rail}
       </OverlayPanel>
 
-      <OverlayPanel open={scheduleModalOpen} onClose={() => setScheduleModalOpen(false)} title="Create Runtime Schedule" mode="center">
+      <OverlayPanel
+        open={scheduleModalOpen}
+        onClose={() => setScheduleModalOpen(false)}
+        title="Create Runtime Schedule"
+        subtitle="Define broadcast start and optional stop windows."
+        mode="center"
+      >
         <form className="fieldGrid" onSubmit={(event) => void onCreateSchedule(event)}>
           <label className="field">
             <span>Start Time</span>
@@ -1201,18 +1253,26 @@ export default function StationManagerPage() {
               disabled={busy}
             />
           </label>
-          <div className="pageBanner__actions">
+          <div className="modalActions">
             <button className="uiButton uiButton--accent" type="submit" disabled={busy || !scheduleStart}>
+              <AppIcon name="plus" />
               Create Schedule
             </button>
             <button className="uiButton uiButton--secondary" type="button" onClick={() => setScheduleModalOpen(false)}>
+              <AppIcon name="close" />
               Cancel
             </button>
           </div>
         </form>
       </OverlayPanel>
 
-      <OverlayPanel open={importProgramsModalOpen} onClose={() => setImportProgramsModalOpen(false)} title="Import Programs" mode="center">
+      <OverlayPanel
+        open={importProgramsModalOpen}
+        onClose={() => setImportProgramsModalOpen(false)}
+        title="Import Programs"
+        subtitle="Select from your wallet library and add to station inventory."
+        mode="center"
+      >
         <div className="fieldGrid">
           <p className="metaLine">Select programs from your global library and import into this station.</p>
           {globalProgramLibrary.length === 0 ? <p className="emptyState">No global programs available.</p> : null}
@@ -1235,23 +1295,31 @@ export default function StationManagerPage() {
               })}
             </div>
           ) : null}
-          <div className="pageBanner__actions">
+          <div className="modalActions">
             <button
               className="uiButton uiButton--accent"
               type="button"
               onClick={() => void onImportLibraryAssets(selectedLibraryPrograms)}
               disabled={busy || selectedLibraryPrograms.length === 0 || !ownerWallet}
             >
+              <AppIcon name="upload" />
               Import Selected Programs
             </button>
             <button className="uiButton uiButton--secondary" type="button" onClick={() => setImportProgramsModalOpen(false)}>
+              <AppIcon name="close" />
               Cancel
             </button>
           </div>
         </div>
       </OverlayPanel>
 
-      <OverlayPanel open={importAdsModalOpen} onClose={() => setImportAdsModalOpen(false)} title="Import Ads / Sponsors" mode="center">
+      <OverlayPanel
+        open={importAdsModalOpen}
+        onClose={() => setImportAdsModalOpen(false)}
+        title="Import Ads / Sponsors"
+        subtitle="Select ad assets from your global library for this station."
+        mode="center"
+      >
         <div className="fieldGrid">
           <p className="metaLine">Select ad assets from your global library and import into this station.</p>
           {loadingLibrary ? <p className="loadingState">Refreshing library...</p> : null}
@@ -1275,16 +1343,18 @@ export default function StationManagerPage() {
               })}
             </div>
           ) : null}
-          <div className="pageBanner__actions">
+          <div className="modalActions">
             <button
               className="uiButton uiButton--accent"
               type="button"
               onClick={() => void onImportLibraryAssets(selectedLibraryAds)}
               disabled={busy || selectedLibraryAds.length === 0 || !ownerWallet}
             >
+              <AppIcon name="upload" />
               Import Selected Ads
             </button>
             <button className="uiButton uiButton--secondary" type="button" onClick={() => setImportAdsModalOpen(false)}>
+              <AppIcon name="close" />
               Cancel
             </button>
           </div>

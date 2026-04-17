@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { createChannel, getChannelStatus, listChannels, listLibraryAssets, uploadLibraryAsset } from "../api";
+import AppIcon from "../components/AppIcon";
 import OverlayPanel from "../components/OverlayPanel";
 import type { Asset, AssetInsertionCategory, ChannelSummary, PlayoutState, StreamMode } from "../types";
 import { disconnectWallet, formatWalletAddress, getStoredWalletAddress } from "../wallet";
@@ -240,7 +241,10 @@ export default function CreatorDashboardPage() {
               setRailOpen(false);
             }}
           >
-            Stations
+            <span className="uiInline">
+              <AppIcon name="monitor" />
+              Stations
+            </span>
           </button>
           <button
             type="button"
@@ -250,7 +254,10 @@ export default function CreatorDashboardPage() {
               setRailOpen(false);
             }}
           >
-            Library
+            <span className="uiInline">
+              <AppIcon name="library" />
+              Library
+            </span>
           </button>
           <button
             type="button"
@@ -260,7 +267,10 @@ export default function CreatorDashboardPage() {
               setRailOpen(false);
             }}
           >
-            Account
+            <span className="uiInline">
+              <AppIcon name="user" />
+              Account
+            </span>
           </button>
         </div>
       </section>
@@ -294,15 +304,18 @@ export default function CreatorDashboardPage() {
             <div className="workspaceHead__actions">
               {section === "stations" ? (
                 <button className="uiButton uiButton--accent" type="button" onClick={() => setCreateModalOpen(true)}>
+                  <AppIcon name="plus" />
                   New Station
                 </button>
               ) : null}
               {section === "library" ? (
                 <button className="uiButton uiButton--accent" type="button" onClick={() => setUploadModalOpen(true)}>
+                  <AppIcon name="upload" />
                   Upload Media
                 </button>
               ) : null}
               <button className="uiButton uiButton--ghost mobileOnly" type="button" onClick={() => setRailOpen(true)}>
+                <AppIcon name="menu" />
                 Open Navigation
               </button>
             </div>
@@ -336,6 +349,7 @@ export default function CreatorDashboardPage() {
                     <p>Live channels are prioritized, then sorted by creation time.</p>
                   </div>
                   <button className="uiButton uiButton--secondary" type="button" onClick={() => void refreshStations()} disabled={loadingStations}>
+                    <AppIcon name="refresh" />
                     {loadingStations ? "Refreshing" : "Refresh"}
                   </button>
                 </header>
@@ -360,9 +374,11 @@ export default function CreatorDashboardPage() {
                               {station.state?.isRunning ? "Live" : "Off Air"}
                             </span>
                             <Link className="uiButton uiButton--secondary" to={`/stations/${station.summary.channel.id}`}>
+                              <AppIcon name="monitor" />
                               Manage
                             </Link>
                             <Link className="uiButton uiButton--secondary" to={`/stations/${station.summary.channel.id}/preview`}>
+                              <AppIcon name="eye" />
                               Preview
                             </Link>
                           </div>
@@ -382,6 +398,7 @@ export default function CreatorDashboardPage() {
                     <p>Wallet-scoped assets ready for import across all stations.</p>
                   </div>
                   <button className="uiButton uiButton--secondary" type="button" onClick={() => void refreshLibrary()} disabled={loadingLibrary}>
+                    <AppIcon name="refresh" />
                     {loadingLibrary ? "Refreshing" : "Refresh"}
                   </button>
                 </header>
@@ -402,6 +419,7 @@ export default function CreatorDashboardPage() {
                             <span className="miniTag">{asset.mediaKind}</span>
                             {asset.ipfsUrl ? (
                               <a className="uiButton uiButton--secondary" href={asset.ipfsUrl} target="_blank" rel="noreferrer">
+                                <AppIcon name="eye" />
                                 IPFS
                               </a>
                             ) : null}
@@ -425,6 +443,7 @@ export default function CreatorDashboardPage() {
                 <div className="workspaceSection__body">
                   <p className="metaLine">Connected wallet: {ownerWallet}</p>
                   <button className="uiButton uiButton--danger" type="button" onClick={onDisconnectWallet}>
+                    <AppIcon name="close" />
                     Disconnect Wallet
                   </button>
                 </div>
@@ -438,7 +457,13 @@ export default function CreatorDashboardPage() {
         {rail}
       </OverlayPanel>
 
-      <OverlayPanel open={createModalOpen} onClose={() => setCreateModalOpen(false)} title="Create Station" mode="center">
+      <OverlayPanel
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        title="Create Station"
+        subtitle="Set station identity and output mode for this channel."
+        mode="center"
+      >
         <form className="fieldGrid" onSubmit={(event) => void onCreateStation(event)}>
           <label className="field">
             <span>Station Name</span>
@@ -460,18 +485,26 @@ export default function CreatorDashboardPage() {
               <option value="radio">Radio</option>
             </select>
           </label>
-          <div className="pageBanner__actions">
+          <div className="modalActions">
             <button className="uiButton uiButton--accent" type="submit" disabled={creating || !name.trim()}>
+              <AppIcon name="plus" />
               {creating ? "Creating" : "Create Station"}
             </button>
             <button className="uiButton uiButton--secondary" type="button" onClick={() => setCreateModalOpen(false)}>
+              <AppIcon name="close" />
               Cancel
             </button>
           </div>
         </form>
       </OverlayPanel>
 
-      <OverlayPanel open={uploadModalOpen} onClose={() => setUploadModalOpen(false)} title="Upload Library Asset" mode="center">
+      <OverlayPanel
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        title="Upload Library Asset"
+        subtitle="Upload once, then import into any station workflow."
+        mode="center"
+      >
         <form className="fieldGrid" onSubmit={(event) => void onUploadLibraryAsset(event)}>
           <label className="field">
             <span>Media File</span>
@@ -526,11 +559,13 @@ export default function CreatorDashboardPage() {
             </>
           ) : null}
 
-          <div className="pageBanner__actions">
+          <div className="modalActions">
             <button className="uiButton uiButton--accent" type="submit" disabled={uploadingLibrary || !libraryFile}>
+              <AppIcon name="upload" />
               {uploadingLibrary ? "Uploading" : "Upload"}
             </button>
             <button className="uiButton uiButton--secondary" type="button" onClick={() => setUploadModalOpen(false)}>
+              <AppIcon name="close" />
               Cancel
             </button>
           </div>
