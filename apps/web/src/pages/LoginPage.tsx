@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import AppIcon from "../components/AppIcon";
 import { connectWallet, disconnectWallet, formatWalletAddress, getStoredWalletAddress } from "../wallet";
 
 type AuthMode = "login" | "signup";
@@ -47,6 +48,7 @@ export default function LoginPage() {
             <span className="brandLockup__subtitle">Live Channel Operations</span>
           </div>
           <button className="uiButton uiButton--ghost" type="button" disabled>
+            <AppIcon name="arrow-left" />
             Back
           </button>
         </div>
@@ -101,16 +103,31 @@ export default function LoginPage() {
 
           <div className="authMethods">
             <button className="authMethod authMethod--active" type="button" onClick={() => void onConnectWallet()} disabled={connecting || Boolean(wallet)}>
-              <span className="authMethod__label">{connecting ? "Connecting Wallet..." : wallet ? "Wallet Connected" : "Continue with Reown AppKit"}</span>
-              <span className="authMethod__meta">Injected wallet · production ready</span>
+              <span className="authMethod__icon">
+                <AppIcon name="wallet" />
+              </span>
+              <span className="authMethod__content">
+                <span className="authMethod__label">{connecting ? "Connecting Wallet..." : wallet ? "Wallet Connected" : "Continue with Reown AppKit"}</span>
+                <span className="authMethod__meta">Injected wallet · production ready</span>
+              </span>
             </button>
             <button className="authMethod" type="button" disabled>
-              <span className="authMethod__label">Continue with Smart Wallet</span>
-              <span className="authMethod__meta">Email or passkey onboarding · coming soon</span>
+              <span className="authMethod__icon">
+                <AppIcon name="zap" />
+              </span>
+              <span className="authMethod__content">
+                <span className="authMethod__label">Continue with Smart Wallet</span>
+                <span className="authMethod__meta">Email or passkey onboarding · coming soon</span>
+              </span>
             </button>
             <button className="authMethod" type="button" disabled>
-              <span className="authMethod__label">Continue with External Wallet</span>
-              <span className="authMethod__meta">WalletConnect + mobile deep links · coming soon</span>
+              <span className="authMethod__icon">
+                <AppIcon name="monitor" />
+              </span>
+              <span className="authMethod__content">
+                <span className="authMethod__label">Continue with External Wallet</span>
+                <span className="authMethod__meta">WalletConnect + mobile deep links · coming soon</span>
+              </span>
             </button>
           </div>
 
@@ -125,9 +142,11 @@ export default function LoginPage() {
                 </p>
                 <div className="pageBanner__actions">
                   <button className="uiButton uiButton--accent" type="button" onClick={() => navigate("/dashboard")}>
+                    <AppIcon name="home" />
                     Enter Workspace
                   </button>
                   <button className="uiButton uiButton--danger" type="button" onClick={onDisconnectWallet}>
+                    <AppIcon name="close" />
                     Disconnect Wallet
                   </button>
                 </div>
