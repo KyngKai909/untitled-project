@@ -130,6 +130,8 @@ export async function createChannel(input: {
   ownerWallet: string;
   name: string;
   description?: string;
+  profileImageUrl?: string;
+  bannerImageUrl?: string;
   brandColor?: string;
   streamMode?: StreamMode;
 }) {
@@ -147,6 +149,8 @@ export async function patchChannel(
   input: {
     name?: string;
     description?: string;
+    profileImageUrl?: string;
+    bannerImageUrl?: string;
     brandColor?: string;
     playerLabel?: string;
     streamMode?: StreamMode;
@@ -162,6 +166,18 @@ export async function patchChannel(
     },
     body: JSON.stringify(input)
   });
+}
+
+export async function uploadChannelProfileImage(channelId: string, input: { file: File }): Promise<{ channel: Channel }> {
+  const form = new FormData();
+  form.set("file", input.file);
+  return uploadRequest(`/api/channels/${channelId}/profile-image`, form);
+}
+
+export async function uploadChannelBannerImage(channelId: string, input: { file: File }): Promise<{ channel: Channel }> {
+  const form = new FormData();
+  form.set("file", input.file);
+  return uploadRequest(`/api/channels/${channelId}/banner-image`, form);
 }
 
 export async function getChannelDetail(channelId: string): Promise<ChannelDetail> {

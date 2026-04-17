@@ -272,7 +272,24 @@ function normalizeBackgroundUploadPath(value: unknown): string | undefined {
   return trimmed.startsWith("/uploads/") ? trimmed : undefined;
 }
 
-function isSupportedRadioBackground(file: Express.Multer.File | undefined): boolean {
+function normalizeChannelImageUrl(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  if (trimmed.startsWith("/uploads/")) {
+    return trimmed;
+  }
+
+  return /^https?:\/\/\S+$/i.test(trimmed) ? trimmed : undefined;
+}
+
+function isSupportedImageFile(file: Express.Multer.File | undefined): boolean {
   if (!file) {
     return false;
   }
@@ -976,6 +993,26 @@ app.post("/api/channels", async (req, res) => {
   const streamMode = normalizeStreamMode(req.body?.streamMode);
   const brandColor = normalizeBrandColor(req.body?.brandColor) ?? "#00a96b";
   const playerLabel = normalizePlayerLabel(req.body?.playerLabel) ?? name;
+  const profileImageRaw = req.body?.profileImageUrl;
+  const profileImageUrl = normalizeChannelImageUrl(profileImageRaw);
+  if (
+    profileImageRaw !== undefined &&
+    profileImageRaw !== null &&
+    String(profileImageRaw).trim() !== "" &&
+    !profileImageUrl
+  ) {
+    return sendError(res, 400, "profileImageUrl must be an http(s) URL or /uploads path.");
+  }
+  const bannerImageRaw = req.body?.bannerImageUrl;
+  const bannerImageUrl = normalizeChannelImageUrl(bannerImageRaw);
+  if (
+    bannerImageRaw !== undefined &&
+    bannerImageRaw !== null &&
+    String(bannerImageRaw).trim() !== "" &&
+    !bannerImageUrl
+  ) {
+    return sendError(res, 400, "bannerImageUrl must be an http(s) URL or /uploads path.");
+  }
   const ownerWalletInput = req.body?.ownerWallet;
   const ownerWallet = normalizeWalletAddress(ownerWalletInput);
   if (ownerWalletInput !== undefined && ownerWalletInput !== "" && !ownerWallet) {
@@ -991,6 +1028,8 @@ app.post("/api/channels", async (req, res) => {
       name,
       slug,
       description,
+      profileImageUrl,
+      bannerImageUrl,
       adInterval,
       adTriggerMode,
       adTimeIntervalSec,
@@ -1074,6 +1113,28 @@ app.patch("/api/channels/:channelId", async (req, res) => {
     streamModeProvided && (req.body?.streamMode === "video" || req.body?.streamMode === "radio")
       ? normalizeStreamMode(req.body?.streamMode)
       : undefined;
+  const profileImageProvided = req.body && Object.prototype.hasOwnProperty.call(req.body, "profileImageUrl");
+  const profileImageInput = profileImageProvided ? req.body?.profileImageUrl : undefined;
+  const profileImageUrl = profileImageProvided ? normalizeChannelImageUrl(profileImageInput) : undefined;
+  if (
+    profileImageProvided &&
+    profileImageInput !== null &&
+    String(profileImageInput ?? "").trim() !== "" &&
+    !profileImageUrl
+  ) {
+    return sendError(res, 400, "profileImageUrl must be an http(s) URL or /uploads path.");
+  }
+  const bannerImageProvided = req.body && Object.prototype.hasOwnProperty.call(req.body, "bannerImageUrl");
+  const bannerImageInput = bannerImageProvided ? req.body?.bannerImageUrl : undefined;
+  const bannerImageUrl = bannerImageProvided ? normalizeChannelImageUrl(bannerImageInput) : undefined;
+  if (
+    bannerImageProvided &&
+    bannerImageInput !== null &&
+    String(bannerImageInput ?? "").trim() !== "" &&
+    !bannerImageUrl
+  ) {
+    return sendError(res, 400, "bannerImageUrl must be an http(s) URL or /uploads path.");
+  }
   const backgroundProvided = req.body && Object.prototype.hasOwnProperty.call(req.body, "radioBackgroundUrl");
   const radioBackgroundUrl = backgroundProvided ? normalizeBackgroundUploadPath(req.body?.radioBackgroundUrl) : undefined;
 
@@ -1115,6 +1176,12 @@ app.patch("/api/channels/:channelId", async (req, res) => {
     }
     if (streamMode) {
       channel.streamMode = streamMode;
+    }
+    if (profileImageProvided) {
+      channel.profileImageUrl = profileImageUrl;
+    }
+    if (bannerImageProvided) {
+      channel.bannerImageUrl = bannerImageUrl;
     }
     if (backgroundProvided) {
       channel.radioBackgroundUrl = radioBackgroundUrl;
@@ -1650,12 +1717,92 @@ app.post("/api/channels/:channelId/assets/upload", upload.single("file"), async 
   res.status(201).json(payload);
 });
 
+app.post("/api/channels/:channelId/profile-image", upload.single("file"), async (req, res) => {
+  if (!req.file) {
+    return sendError(res, 400, "No file uploaded.");
+  }
+
+  if (!isSupportedImageFile(req.file)) {
+    return sendError(res, 400, "Profile image must be an image or GIF (jpg, png, webp, gif).");
+  }
+
+  const db = await readDb();
+  const channel = getChannel(db, req.params.channelId);
+  if (!channel) {
+    return sendError(res, 404, "Channel not found.");
+  }
+
+  const ext = path.extname(req.file.originalname || ".png") || ".png";
+  const imageId = `profile-image-${Date.now()}`;
+  const fileName = `${imageId}${ext.toLowerCase()}`;
+  const localPath = await moveUploadedFile(req.file.path, channel.id, imageId, fileName);
+  const relativePath = path.relative(UPLOAD_ROOT, localPath).split(path.sep).join("/");
+  const publicPath = `/uploads/${relativePath}`;
+
+  const payload = await transaction((editable) => {
+    const editableChannel = getChannel(editable, req.params.channelId);
+    if (!editableChannel) {
+      return { error: "Channel not found." };
+    }
+
+    editableChannel.profileImageUrl = publicPath;
+    editableChannel.updatedAt = nowIso();
+    return { channel: editableChannel };
+  });
+
+  if (hasError(payload)) {
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
+  }
+
+  res.status(201).json(payload);
+});
+
+app.post("/api/channels/:channelId/banner-image", upload.single("file"), async (req, res) => {
+  if (!req.file) {
+    return sendError(res, 400, "No file uploaded.");
+  }
+
+  if (!isSupportedImageFile(req.file)) {
+    return sendError(res, 400, "Banner image must be an image or GIF (jpg, png, webp, gif).");
+  }
+
+  const db = await readDb();
+  const channel = getChannel(db, req.params.channelId);
+  if (!channel) {
+    return sendError(res, 404, "Channel not found.");
+  }
+
+  const ext = path.extname(req.file.originalname || ".png") || ".png";
+  const imageId = `banner-image-${Date.now()}`;
+  const fileName = `${imageId}${ext.toLowerCase()}`;
+  const localPath = await moveUploadedFile(req.file.path, channel.id, imageId, fileName);
+  const relativePath = path.relative(UPLOAD_ROOT, localPath).split(path.sep).join("/");
+  const publicPath = `/uploads/${relativePath}`;
+
+  const payload = await transaction((editable) => {
+    const editableChannel = getChannel(editable, req.params.channelId);
+    if (!editableChannel) {
+      return { error: "Channel not found." };
+    }
+
+    editableChannel.bannerImageUrl = publicPath;
+    editableChannel.updatedAt = nowIso();
+    return { channel: editableChannel };
+  });
+
+  if (hasError(payload)) {
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
+  }
+
+  res.status(201).json(payload);
+});
+
 app.post("/api/channels/:channelId/radio/background", upload.single("file"), async (req, res) => {
   if (!req.file) {
     return sendError(res, 400, "No file uploaded.");
   }
 
-  if (!isSupportedRadioBackground(req.file)) {
+  if (!isSupportedImageFile(req.file)) {
     return sendError(res, 400, "Background must be an image or GIF (jpg, png, webp, gif).");
   }
 

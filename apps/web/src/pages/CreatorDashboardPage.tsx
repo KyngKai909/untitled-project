@@ -1,6 +1,15 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { createChannel, getChannelStatus, listChannels, listLibraryAssets, uploadLibraryAsset } from "../api";
+import {
+  createChannel,
+  getChannelStatus,
+  listChannels,
+  listLibraryAssets,
+  patchChannel,
+  uploadChannelBannerImage,
+  uploadChannelProfileImage,
+  uploadLibraryAsset
+} from "../api";
 import AppIcon from "../components/AppIcon";
 import OverlayPanel from "../components/OverlayPanel";
 import type { Asset, AssetInsertionCategory, ChannelSummary, PlayoutState, StreamMode } from "../types";
@@ -34,6 +43,19 @@ function mapLibraryKindToApi(kind: AssetInsertionCategory): { type: "program" | 
   return { type: "ad", insertionCategory: kind };
 }
 
+function stationInitials(name: string): string {
+  if (!name.trim()) {
+    return "ST";
+  }
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word.charAt(0))
+    .join("")
+    .toUpperCase();
+}
+
 export default function CreatorDashboardPage() {
   const navigate = useNavigate();
   const [wallet, setWallet] = useState<string | null>(() => getStoredWalletAddress());
@@ -55,6 +77,10 @@ export default function CreatorDashboardPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [streamMode, setStreamMode] = useState<StreamMode>("video");
+  const [profileImageUrl, setProfileImageUrl] = useState("");
+  const [bannerImageUrl, setBannerImageUrl] = useState("");
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [bannerImageFile, setBannerImageFile] = useState<File | null>(null);
   const [creating, setCreating] = useState(false);
 
   const [libraryFile, setLibraryFile] = useState<File | null>(null);
@@ -133,6 +159,30 @@ export default function CreatorDashboardPage() {
       libraryAds: libraryAssets.filter((asset) => asset.type === "ad").length
     };
   }, [libraryAssets, stations]);
+  const profileImagePreview = useMemo(
+    () => (profileImageFile ? URL.createObjectURL(profileImageFile) : undefined),
+    [profileImageFile]
+  );
+  const bannerImagePreview = useMemo(
+    () => (bannerImageFile ? URL.createObjectURL(bannerImageFile) : undefined),
+    [bannerImageFile]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (profileImagePreview) {
+        URL.revokeObjectURL(profileImagePreview);
+      }
+    };
+  }, [profileImagePreview]);
+
+  useEffect(() => {
+    return () => {
+      if (bannerImagePreview) {
+        URL.revokeObjectURL(bannerImagePreview);
+      }
+    };
+  }, [bannerImagePreview]);
 
   function onDisconnectWallet() {
     disconnectWallet();
@@ -158,15 +208,48 @@ export default function CreatorDashboardPage() {
         streamMode,
         brandColor: streamMode === "radio" ? "#f59e0b" : "#0ea5e9"
       });
+      const creationWarnings: string[] = [];
+
+      if (profileImageUrl.trim() || bannerImageUrl.trim()) {
+        try {
+          await patchChannel(response.channel.id, {
+            profileImageUrl: profileImageUrl.trim(),
+            bannerImageUrl: bannerImageUrl.trim()
+          });
+        } catch (err) {
+          creationWarnings.push(err instanceof Error ? err.message : "Failed to set logo/banner URLs.");
+        }
+      }
+
+      if (profileImageFile) {
+        try {
+          await uploadChannelProfileImage(response.channel.id, { file: profileImageFile });
+        } catch (err) {
+          creationWarnings.push(err instanceof Error ? err.message : "Failed to upload station logo.");
+        }
+      }
+
+      if (bannerImageFile) {
+        try {
+          await uploadChannelBannerImage(response.channel.id, { file: bannerImageFile });
+        } catch (err) {
+          creationWarnings.push(err instanceof Error ? err.message : "Failed to upload station banner.");
+        }
+      }
 
       setName("");
       setDescription("");
       setStreamMode("video");
+      setProfileImageUrl("");
+      setBannerImageUrl("");
+      setProfileImageFile(null);
+      setBannerImageFile(null);
       setCreateModalOpen(false);
       setInfo(
         [
           "Station created. Opening manager...",
-          response.livepeerWarning ? `Livepeer warning: ${response.livepeerWarning}` : null
+          response.livepeerWarning ? `Livepeer warning: ${response.livepeerWarning}` : null,
+          creationWarnings.length > 0 ? `Branding warnings: ${creationWarnings.join(" ")}` : null
         ]
           .filter(Boolean)
           .join(" ")
@@ -468,7 +551,7 @@ export default function CreatorDashboardPage() {
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
         title="Create Station"
-        subtitle="Set station identity and output mode for this channel."
+        subtitle="Set station identity, branding, and output mode for this channel."
         mode="center"
       >
         <form className="fieldGrid" onSubmit={(event) => void onCreateStation(event)}>
@@ -492,6 +575,72 @@ export default function CreatorDashboardPage() {
               <option value="radio">Radio</option>
             </select>
           </label>
+
+          <section className="streamSettingsCard">
+            <h3>Station Branding</h3>
+            <div className="stationIdentityInputs">
+              <label className="field">
+                <span>Logo URL</span>
+                <input
+                  className="uiInput"
+                  value={profileImageUrl}
+                  onChange={(event) => setProfileImageUrl(event.target.value)}
+                  placeholder="https://... or /uploads/..."
+                  disabled={creating}
+                />
+              </label>
+              <label className="field">
+                <span>Upload Logo</span>
+                <input
+                  className="uiFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => setProfileImageFile(event.target.files?.[0] ?? null)}
+                  disabled={creating}
+                />
+              </label>
+              <label className="field">
+                <span>Banner URL</span>
+                <input
+                  className="uiInput"
+                  value={bannerImageUrl}
+                  onChange={(event) => setBannerImageUrl(event.target.value)}
+                  placeholder="https://... or /uploads/..."
+                  disabled={creating}
+                />
+              </label>
+              <label className="field">
+                <span>Upload Banner</span>
+                <input
+                  className="uiFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => setBannerImageFile(event.target.files?.[0] ?? null)}
+                  disabled={creating}
+                />
+              </label>
+            </div>
+
+            <div className="stationIdentityPreview stationIdentityPreview--create">
+              <div
+                className="stationIdentityPreview__banner"
+                style={{
+                  backgroundImage:
+                    bannerImagePreview || bannerImageUrl.trim()
+                      ? `linear-gradient(to top, var(--overlay), transparent), url(${bannerImagePreview || bannerImageUrl.trim()})`
+                      : undefined
+                }}
+              />
+              <div className="stationIdentityPreview__logo">
+                {profileImagePreview || profileImageUrl.trim() ? (
+                  <img src={profileImagePreview || profileImageUrl.trim()} alt="Station logo preview" />
+                ) : (
+                  <span>{stationInitials(name)}</span>
+                )}
+              </div>
+            </div>
+          </section>
+
           <div className="modalActions">
             <button className="uiButton uiButton--accent" type="submit" disabled={creating || !name.trim()}>
               <AppIcon name="plus" />

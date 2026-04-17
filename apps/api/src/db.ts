@@ -82,6 +82,14 @@ function normalizeDb(input: unknown): DatabaseSchema {
       : 10 * 60,
     brandColor: channel.brandColor ?? "#00a96b",
     playerLabel: channel.playerLabel ?? channel.name,
+    profileImageUrl:
+      typeof channel.profileImageUrl === "string" && channel.profileImageUrl.trim()
+        ? channel.profileImageUrl.trim()
+        : undefined,
+    bannerImageUrl:
+      typeof channel.bannerImageUrl === "string" && channel.bannerImageUrl.trim()
+        ? channel.bannerImageUrl.trim()
+        : undefined,
     streamMode: normalizeStreamMode(channel.streamMode),
     radioBackgroundUrl:
       typeof channel.radioBackgroundUrl === "string" && channel.radioBackgroundUrl.trim()

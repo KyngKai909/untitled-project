@@ -10,6 +10,8 @@ export interface Channel {
   name: string;
   slug: string;
   description: string;
+  profileImageUrl?: string;
+  bannerImageUrl?: string;
   adInterval: number;
   adTriggerMode: AdTriggerMode;
   adTimeIntervalSec: number;

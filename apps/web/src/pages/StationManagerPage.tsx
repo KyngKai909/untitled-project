@@ -15,7 +15,9 @@ import {
   patchChannel,
   putPlaylist,
   sendChannelControl,
-  setLivepeerEnabled
+  setLivepeerEnabled,
+  uploadChannelBannerImage,
+  uploadChannelProfileImage
 } from "../api";
 import AppIcon from "../components/AppIcon";
 import HlsPlayer from "../components/HlsPlayer";
@@ -33,6 +35,73 @@ interface ManagerGuideEntry {
   startMs?: number;
   endMs?: number;
 }
+
+type ManagerViewerMode = "public" | "unlisted" | "token";
+type ManagerMulticastStatus = "live" | "standby" | "idle";
+
+interface ManagerMulticastDestination {
+  id: string;
+  name: string;
+  wordmark: string;
+  handle: string;
+  region: string;
+  viewers: number;
+  active: boolean;
+  status: ManagerMulticastStatus;
+}
+
+const MANAGER_MULTICAST_DESTINATIONS: ManagerMulticastDestination[] = [
+  {
+    id: "youtube",
+    name: "YouTube",
+    wordmark: "YT",
+    handle: "@opencastcore",
+    region: "Global",
+    viewers: 281,
+    active: true,
+    status: "live"
+  },
+  {
+    id: "twitch",
+    name: "Twitch",
+    wordmark: "TW",
+    handle: "opencast_live",
+    region: "North America",
+    viewers: 97,
+    active: true,
+    status: "standby"
+  },
+  {
+    id: "vimeo",
+    name: "Vimeo",
+    wordmark: "VI",
+    handle: "OpenCast Broadcast",
+    region: "EMEA",
+    viewers: 42,
+    active: true,
+    status: "standby"
+  },
+  {
+    id: "tiktok",
+    name: "TikTok Live",
+    wordmark: "TT",
+    handle: "@opencast.tv",
+    region: "US East",
+    viewers: 0,
+    active: false,
+    status: "idle"
+  },
+  {
+    id: "x",
+    name: "X Live",
+    wordmark: "X",
+    handle: "@OpenCastCore",
+    region: "US West",
+    viewers: 0,
+    active: false,
+    status: "idle"
+  }
+];
 
 function formatDateTime(iso: string | undefined): string {
   if (!iso) {
@@ -98,6 +167,19 @@ function formatElapsed(seconds: number | undefined): string {
     return `${minutes}m ${String(secs).padStart(2, "0")}s`;
   }
   return `${secs}s`;
+}
+
+function stationInitials(name: string | undefined): string {
+  if (!name?.trim()) {
+    return "ST";
+  }
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word.charAt(0))
+    .join("")
+    .toUpperCase();
 }
 
 function toMs(iso: string | undefined): number | undefined {
@@ -208,6 +290,18 @@ export default function StationManagerPage() {
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [importProgramsModalOpen, setImportProgramsModalOpen] = useState(false);
   const [importAdsModalOpen, setImportAdsModalOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [managerSettingsModalOpen, setManagerSettingsModalOpen] = useState(false);
+  const [viewerMode, setViewerMode] = useState<ManagerViewerMode>("public");
+  const [viewerCommentsEnabled, setViewerCommentsEnabled] = useState(true);
+  const [viewerVotingEnabled, setViewerVotingEnabled] = useState(true);
+  const [managerMulticastDestinations, setManagerMulticastDestinations] = useState<ManagerMulticastDestination[]>(
+    MANAGER_MULTICAST_DESTINATIONS
+  );
+  const [profileImageUrlInput, setProfileImageUrlInput] = useState("");
+  const [bannerImageUrlInput, setBannerImageUrlInput] = useState("");
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [bannerImageFile, setBannerImageFile] = useState<File | null>(null);
 
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -236,6 +330,8 @@ export default function StationManagerPage() {
       setName(merged.channel.name);
       setDescription(merged.channel.description || "");
       setStreamMode(merged.channel.streamMode);
+      setProfileImageUrlInput(merged.channel.profileImageUrl ?? "");
+      setBannerImageUrlInput(merged.channel.bannerImageUrl ?? "");
       setQueueDraft(merged.playlist.map((item) => item.assetId));
       setAdTriggerMode(merged.channel.adTriggerMode);
       setAdInterval(merged.channel.adInterval);
@@ -448,6 +544,85 @@ export default function StationManagerPage() {
       queueDepth: detail?.playlist.length ?? 0
     };
   }, [activeCustomDestination, detail]);
+  const managerActiveMulticast = useMemo(
+    () => managerMulticastDestinations.filter((destination) => destination.active),
+    [managerMulticastDestinations]
+  );
+  const managerLiveMulticast = useMemo(
+    () => managerActiveMulticast.filter((destination) => destination.status === "live"),
+    [managerActiveMulticast]
+  );
+  const managerTotalMulticastViewers = useMemo(
+    () => managerActiveMulticast.reduce((total, destination) => total + destination.viewers, 0),
+    [managerActiveMulticast]
+  );
+  const profileImageFilePreview = useMemo(
+    () => (profileImageFile ? URL.createObjectURL(profileImageFile) : undefined),
+    [profileImageFile]
+  );
+  const bannerImageFilePreview = useMemo(
+    () => (bannerImageFile ? URL.createObjectURL(bannerImageFile) : undefined),
+    [bannerImageFile]
+  );
+  const profileImagePreview = profileImageFilePreview || profileImageUrlInput.trim() || detail?.channel.profileImageUrl || "";
+  const bannerImagePreview = bannerImageFilePreview || bannerImageUrlInput.trim() || detail?.channel.bannerImageUrl || "";
+
+  useEffect(() => {
+    return () => {
+      if (profileImageFilePreview) {
+        URL.revokeObjectURL(profileImageFilePreview);
+      }
+    };
+  }, [profileImageFilePreview]);
+
+  useEffect(() => {
+    return () => {
+      if (bannerImageFilePreview) {
+        URL.revokeObjectURL(bannerImageFilePreview);
+      }
+    };
+  }, [bannerImageFilePreview]);
+
+  function toggleManagerMulticastDestination(destinationId: string) {
+    setManagerMulticastDestinations((current) =>
+      current.map((destination) => {
+        if (destination.id !== destinationId) {
+          return destination;
+        }
+        if (destination.active) {
+          return { ...destination, active: false, status: "idle" };
+        }
+        return { ...destination, active: true, status: "standby" };
+      })
+    );
+  }
+
+  function cycleManagerMulticastState(destinationId: string) {
+    setManagerMulticastDestinations((current) =>
+      current.map((destination) => {
+        if (destination.id !== destinationId || !destination.active) {
+          return destination;
+        }
+        if (destination.status === "standby") {
+          return { ...destination, status: "live" };
+        }
+        if (destination.status === "live") {
+          return { ...destination, status: "standby" };
+        }
+        return { ...destination, status: "standby" };
+      })
+    );
+  }
+
+  function managerMulticastStatusLabel(destination: ManagerMulticastDestination): string {
+    if (!destination.active) {
+      return "Disabled";
+    }
+    if (destination.status === "live") {
+      return "Live";
+    }
+    return "Standby";
+  }
 
   function addProgramToDraft(assetId: string) {
     setQueueDraft((current) => [...current, assetId]);
@@ -528,8 +703,19 @@ export default function StationManagerPage() {
       await patchChannel(channelId, {
         name: name.trim() || undefined,
         description: description.trim(),
-        streamMode
+        streamMode,
+        profileImageUrl: profileImageUrlInput.trim(),
+        bannerImageUrl: bannerImageUrlInput.trim()
       });
+      if (profileImageFile) {
+        await uploadChannelProfileImage(channelId, { file: profileImageFile });
+      }
+      if (bannerImageFile) {
+        await uploadChannelBannerImage(channelId, { file: bannerImageFile });
+      }
+      setProfileImageFile(null);
+      setBannerImageFile(null);
+      setProfileModalOpen(false);
       setInfo("Station profile updated.");
       await refresh();
     } catch (err) {
@@ -867,9 +1053,17 @@ export default function StationManagerPage() {
                 <AppIcon name="home" />
                 Workspace
               </Link>
+              <button className="uiButton uiButton--secondary" type="button" onClick={() => setProfileModalOpen(true)} disabled={busy || loading || !detail}>
+                <AppIcon name="user" />
+                Edit Details
+              </button>
               <Link className="uiButton uiButton--secondary" to={`/stations/${channelId}/preview`}>
                 <AppIcon name="eye" />
                 Viewer
+              </Link>
+              <Link className="uiButton uiButton--secondary" to="/dashboard">
+                <AppIcon name="plus" />
+                New Station
               </Link>
               <button
                 className={`uiButton ${detail?.state.isRunning ? "uiButton--danger" : "uiButton--accent"}`}
@@ -886,6 +1080,48 @@ export default function StationManagerPage() {
               </button>
             </div>
           </header>
+
+          {detail ? (
+            <section className="stationHero">
+              <div
+                className="stationHero__banner"
+                style={
+                  bannerImagePreview
+                    ? { backgroundImage: `linear-gradient(to top, var(--overlay), transparent), url(${bannerImagePreview})` }
+                    : undefined
+                }
+              />
+              <div className="stationHero__body">
+                <div className="stationHero__logo">
+                  {profileImagePreview ? (
+                    <img src={profileImagePreview} alt={`${detail.channel.name} logo`} />
+                  ) : (
+                    <span>{stationInitials(detail.channel.name)}</span>
+                  )}
+                </div>
+                <div className="stationHero__meta">
+                  <p className="stationHero__eyebrow">Station Identity</p>
+                  <h2>{detail.channel.name}</h2>
+                  <p>{detail.channel.description?.trim() || "No description yet. Add a clear station summary for operators and viewers."}</p>
+                  <p className="metaLine">
+                    <span>{detail.channel.streamMode.toUpperCase()} mode</span>
+                    <span>Created {formatDateTime(detail.channel.createdAt)}</span>
+                    <span>Updated {formatDateTime(detail.channel.updatedAt)}</span>
+                  </p>
+                </div>
+                <div className="stationHero__actions">
+                  <button className="uiButton uiButton--accent" type="button" onClick={() => setProfileModalOpen(true)} disabled={busy}>
+                    <AppIcon name="upload" />
+                    Update Branding
+                  </button>
+                  <Link className="uiButton uiButton--secondary" to={`/stations/${channelId}/preview`}>
+                    <AppIcon name="eye" />
+                    Review Viewer Page
+                  </Link>
+                </div>
+              </div>
+            </section>
+          ) : null}
 
           <nav className="managerTabs" aria-label="Station Workspace Tabs">
             <button type="button" data-active={tab === "monitor"} onClick={() => setTab("monitor")}>
@@ -1102,6 +1338,94 @@ export default function StationManagerPage() {
                         </button>
                       </div>
                     </form>
+                  </div>
+                </section>
+
+                <section className="workspaceSection">
+                  <header className="workspaceSection__head">
+                    <div>
+                      <h2>Public Viewer Controls (Prototype)</h2>
+                      <p>
+                        Management tools moved out of the public viewer. Use this operator surface for audience-facing
+                        settings and multicast distribution.
+                      </p>
+                    </div>
+                    <div className="workspaceHead__actions">
+                      <button className="uiButton uiButton--secondary" type="button" onClick={() => setManagerSettingsModalOpen(true)}>
+                        <AppIcon name="menu" />
+                        Open Stream Settings
+                      </button>
+                    </div>
+                  </header>
+                  <div className="workspaceSection__body">
+                    <section className="managerPrototypeSummary">
+                      <article>
+                        <h4>Viewer Access</h4>
+                        <p>{viewerMode === "public" ? "Public" : viewerMode === "unlisted" ? "Unlisted" : "Token-gated"}</p>
+                      </article>
+                      <article>
+                        <h4>Comments</h4>
+                        <p>{viewerCommentsEnabled ? "Enabled" : "Disabled"}</p>
+                      </article>
+                      <article>
+                        <h4>Voting</h4>
+                        <p>{viewerVotingEnabled ? "Enabled" : "Disabled"}</p>
+                      </article>
+                      <article>
+                        <h4>Multicast</h4>
+                        <p>
+                          {managerLiveMulticast.length} live / {managerActiveMulticast.length} active
+                        </p>
+                      </article>
+                    </section>
+
+                    <section className="multicastBoard" aria-label="Manager Multicast Destinations">
+                      {managerMulticastDestinations.map((destination) => (
+                        <article className="multicastRow" key={`manager-${destination.id}`}>
+                          <div className="multicastRow__identity">
+                            <span className={`multicastWordmark multicastWordmark--${destination.id}`}>{destination.wordmark}</span>
+                            <div className="multicastMeta">
+                              <p className="multicastMeta__name">{destination.name}</p>
+                              <p className="multicastMeta__handle">{destination.handle}</p>
+                            </div>
+                          </div>
+                          <div className="multicastRow__actions">
+                            <span
+                              className={`statusPill ${
+                                destination.status === "live"
+                                  ? "statusPill--live"
+                                  : destination.active
+                                    ? ""
+                                    : "statusPill--off"
+                              }`}
+                            >
+                              {managerMulticastStatusLabel(destination)}
+                            </span>
+                            <div className="managerInlineActions">
+                              <button
+                                className="uiButton uiButton--ghost uiButton--compact"
+                                type="button"
+                                onClick={() => toggleManagerMulticastDestination(destination.id)}
+                              >
+                                {destination.active ? "Disable" : "Enable"}
+                              </button>
+                              <button
+                                className="uiButton uiButton--secondary uiButton--compact"
+                                type="button"
+                                onClick={() => cycleManagerMulticastState(destination.id)}
+                                disabled={!destination.active}
+                              >
+                                {destination.status === "live" ? "Standby" : "Go Live"}
+                              </button>
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </section>
+
+                    <p className="emptyState">
+                      Prototype only. Persisting these settings to API and auth roles can be wired after backend work.
+                    </p>
                   </div>
                 </section>
 
@@ -1445,6 +1769,249 @@ export default function StationManagerPage() {
 
       <OverlayPanel open={railOpen} onClose={() => setRailOpen(false)} title="Station Snapshot" mode="left">
         {rail}
+      </OverlayPanel>
+
+      <OverlayPanel
+        open={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        title="Edit Station Details"
+        subtitle="Name, description, mode, logo, and banner settings."
+        mode="right"
+      >
+        <form
+          className="streamSettingsModal"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void onSaveStationProfile();
+          }}
+        >
+          <section className="streamSettingsCard">
+            <h3>Core Profile</h3>
+            <label className="field">
+              <span>Station Name</span>
+              <input className="uiInput" value={name} onChange={(event) => setName(event.target.value)} required disabled={busy} />
+            </label>
+            <label className="field">
+              <span>Description</span>
+              <textarea className="uiTextarea" value={description} onChange={(event) => setDescription(event.target.value)} disabled={busy} />
+            </label>
+            <label className="field">
+              <span>Stream Mode</span>
+              <select
+                className="uiSelect"
+                value={streamMode}
+                onChange={(event) => setStreamMode(event.target.value === "radio" ? "radio" : "video")}
+                disabled={busy}
+              >
+                <option value="video">Video</option>
+                <option value="radio">Radio</option>
+              </select>
+            </label>
+          </section>
+
+          <section className="streamSettingsCard">
+            <h3>Brand Images</h3>
+            <div className="stationIdentityInputs">
+              <label className="field">
+                <span>Logo URL</span>
+                <input
+                  className="uiInput"
+                  value={profileImageUrlInput}
+                  onChange={(event) => setProfileImageUrlInput(event.target.value)}
+                  placeholder="https://... or /uploads/..."
+                  disabled={busy}
+                />
+              </label>
+              <label className="field">
+                <span>Upload Logo</span>
+                <input
+                  className="uiFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => setProfileImageFile(event.target.files?.[0] ?? null)}
+                  disabled={busy}
+                />
+              </label>
+              <label className="field">
+                <span>Banner URL</span>
+                <input
+                  className="uiInput"
+                  value={bannerImageUrlInput}
+                  onChange={(event) => setBannerImageUrlInput(event.target.value)}
+                  placeholder="https://... or /uploads/..."
+                  disabled={busy}
+                />
+              </label>
+              <label className="field">
+                <span>Upload Banner</span>
+                <input
+                  className="uiFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => setBannerImageFile(event.target.files?.[0] ?? null)}
+                  disabled={busy}
+                />
+              </label>
+            </div>
+
+            <div className="stationIdentityPreview">
+              <div
+                className="stationIdentityPreview__banner"
+                style={
+                  bannerImagePreview
+                    ? { backgroundImage: `linear-gradient(to top, var(--overlay), transparent), url(${bannerImagePreview})` }
+                    : undefined
+                }
+              />
+              <div className="stationIdentityPreview__logo">
+                {profileImagePreview ? (
+                  <img src={profileImagePreview} alt="Station logo preview" />
+                ) : (
+                  <span>{stationInitials(name)}</span>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <div className="modalActions">
+            <button className="uiButton uiButton--accent" type="submit" disabled={busy || !name.trim()}>
+              <AppIcon name="upload" />
+              Save Station Details
+            </button>
+            <button className="uiButton uiButton--secondary" type="button" onClick={() => setProfileModalOpen(false)}>
+              <AppIcon name="close" />
+              Cancel
+            </button>
+          </div>
+        </form>
+      </OverlayPanel>
+
+      <OverlayPanel
+        open={managerSettingsModalOpen}
+        onClose={() => setManagerSettingsModalOpen(false)}
+        title="Public Viewer Stream Settings"
+        subtitle="Click-through prototype for manager-only controls."
+        mode="right"
+      >
+        <div className="streamSettingsModal">
+          <section className="streamSettingsCard">
+            <h3>Audience Access</h3>
+            <p>Set how the broadcast viewer page should be exposed to the public.</p>
+            <label className="field">
+              <span>Viewer Access Mode</span>
+              <select className="uiSelect" value={viewerMode} onChange={(event) => setViewerMode(event.target.value as ManagerViewerMode)}>
+                <option value="public">Public</option>
+                <option value="unlisted">Unlisted Link</option>
+                <option value="token">Token Protected</option>
+              </select>
+            </label>
+            <div className="managerToggleGrid">
+              <button
+                className={`managerToggle ${viewerCommentsEnabled ? "isActive" : ""}`}
+                type="button"
+                onClick={() => setViewerCommentsEnabled((current) => !current)}
+              >
+                <span>Comments</span>
+                <strong>{viewerCommentsEnabled ? "Enabled" : "Disabled"}</strong>
+              </button>
+              <button
+                className={`managerToggle ${viewerVotingEnabled ? "isActive" : ""}`}
+                type="button"
+                onClick={() => setViewerVotingEnabled((current) => !current)}
+              >
+                <span>Skip Voting</span>
+                <strong>{viewerVotingEnabled ? "Enabled" : "Disabled"}</strong>
+              </button>
+            </div>
+          </section>
+
+          <section className="streamSettingsCard">
+            <h3>Multicast Distribution</h3>
+            <p>Manage outbound broadcast routes by platform. This prototype is local only.</p>
+
+            <section className="multicastOverview">
+              <article>
+                <h4>Active</h4>
+                <p>
+                  {managerActiveMulticast.length} / {managerMulticastDestinations.length}
+                </p>
+              </article>
+              <article>
+                <h4>Live</h4>
+                <p>{managerLiveMulticast.length}</p>
+              </article>
+              <article>
+                <h4>Concurrent Viewers</h4>
+                <p>{managerTotalMulticastViewers}</p>
+              </article>
+            </section>
+
+            <section className="multicastStack">
+              {managerMulticastDestinations.map((destination) => (
+                <article className="multicastCard" key={`manager-modal-${destination.id}`}>
+                  <div className="multicastCard__head">
+                    <div className="multicastRow__identity">
+                      <span className={`multicastWordmark multicastWordmark--${destination.id}`}>{destination.wordmark}</span>
+                      <div className="multicastMeta">
+                        <p className="multicastMeta__name">{destination.name}</p>
+                        <p className="multicastMeta__handle">{destination.handle}</p>
+                      </div>
+                    </div>
+                    <span
+                      className={`statusPill ${
+                        destination.status === "live"
+                          ? "statusPill--live"
+                          : destination.active
+                            ? ""
+                            : "statusPill--off"
+                      }`}
+                    >
+                      {managerMulticastStatusLabel(destination)}
+                    </span>
+                  </div>
+                  <div className="multicastCard__meta">
+                    <p>
+                      Region <strong>{destination.region}</strong>
+                    </p>
+                    <p>
+                      Viewers <strong>{destination.active ? destination.viewers : 0}</strong>
+                    </p>
+                  </div>
+                  <div className="multicastCard__actions">
+                    <button
+                      className="uiButton uiButton--secondary uiButton--compact"
+                      type="button"
+                      onClick={() => toggleManagerMulticastDestination(destination.id)}
+                    >
+                      <AppIcon name={destination.active ? "stop" : "plus"} />
+                      {destination.active ? "Disable Route" : "Enable Route"}
+                    </button>
+                    <button
+                      className="uiButton uiButton--ghost uiButton--compact"
+                      type="button"
+                      onClick={() => cycleManagerMulticastState(destination.id)}
+                      disabled={!destination.active}
+                    >
+                      <AppIcon name={destination.status === "live" ? "refresh" : "zap"} />
+                      {destination.status === "live" ? "Move To Standby" : "Mark Live"}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </section>
+          </section>
+
+          <div className="modalActions">
+            <button className="uiButton uiButton--accent" type="button" onClick={() => setManagerSettingsModalOpen(false)}>
+              <AppIcon name="zap" />
+              Save Prototype Settings
+            </button>
+            <button className="uiButton uiButton--secondary" type="button" onClick={() => setManagerSettingsModalOpen(false)}>
+              <AppIcon name="close" />
+              Close
+            </button>
+          </div>
+        </div>
       </OverlayPanel>
 
       <OverlayPanel

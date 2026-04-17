@@ -8,6 +8,8 @@ export interface Channel {
   name: string;
   slug: string;
   description: string;
+  profileImageUrl?: string;
+  bannerImageUrl?: string;
   adInterval: number;
   adTriggerMode: "disabled" | "every_n_programs" | "time_interval";
   adTimeIntervalSec: number;

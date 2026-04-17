@@ -4,6 +4,7 @@
 
 :root {
   color-scheme: light;
+  --topbar-height: 58px;
   --bg: #f1f1f1;
   --surface: #f1f1f1;
   --surface-strong: #f1f1f1;
@@ -497,6 +498,11 @@ select {
   color: var(--accent);
 }
 
+.miniTag--accent-alt {
+  border-color: color-mix(in oklab, var(--accent-alt) 52%, var(--line));
+  color: var(--accent-alt);
+}
+
 .statusPill {
   border: 1px solid var(--line);
   background: var(--surface);
@@ -970,6 +976,8 @@ a.uiButton {
 .watchPage {
   display: grid;
   gap: 0;
+  height: calc(100vh - var(--topbar-height));
+  overflow: hidden;
 }
 
 .watchBroadcast {
@@ -1023,10 +1031,41 @@ a.uiButton {
 }
 
 .watchNow__identity h1 {
-  margin: 0.56rem 0 0;
+  margin: 0;
   font-size: clamp(1.3rem, 2.4vw, 1.9rem);
   line-height: 1.12;
   overflow-wrap: anywhere;
+}
+
+.watchNow__titleRow {
+  margin-top: 0.56rem;
+  display: flex;
+  align-items: center;
+  gap: 0.68rem;
+  min-width: 0;
+}
+
+.watchStationAvatar {
+  width: 2.62rem;
+  height: 2.62rem;
+  border: 1px solid var(--line);
+  background: color-mix(in oklab, var(--accent-soft) 72%, var(--bg));
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-family: "IBM Plex Mono", monospace;
+  flex: 0 0 auto;
+}
+
+.watchStationAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .watchNow__identity p {
@@ -1084,13 +1123,22 @@ a.uiButton {
   background: var(--bg);
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+  align-items: start;
+  height: 100%;
   gap: 0;
 }
 
 .watchMainColumn {
   background: var(--bg);
+  height: 100%;
+  min-height: 0;
   min-width: 0;
   display: grid;
+  align-content: start;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   gap: 0;
 }
 
@@ -1137,8 +1185,14 @@ a.uiButton {
 .watchRail {
   border-left: 1px solid var(--line);
   background: var(--bg);
+  height: 100%;
+  min-height: 0;
   display: grid;
   align-content: start;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   gap: 0;
 }
 
@@ -1217,6 +1271,75 @@ a.uiButton {
   margin: 0;
   font-size: 0.8rem;
   color: var(--text-muted);
+}
+
+.watchStationDetails {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  display: grid;
+  min-width: 0;
+}
+
+.watchStationDetails__banner {
+  min-height: 112px;
+  border-bottom: 1px solid var(--line);
+  background:
+    linear-gradient(
+      120deg,
+      color-mix(in oklab, var(--accent) 24%, var(--bg)),
+      color-mix(in oklab, var(--accent-alt) 20%, var(--bg))
+    );
+  background-size: cover;
+  background-position: center;
+}
+
+.watchStationDetails__row {
+  padding: 0.78rem 0.82rem 0.88rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: flex-start;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.watchStationDetails__logo {
+  width: 62px;
+  height: 62px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-strong);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.watchStationDetails__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.watchStationDetails__meta {
+  min-width: 0;
+}
+
+.watchStationDetails__meta h3 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.14;
+  overflow-wrap: anywhere;
+}
+
+.watchStationDetails__meta p {
+  margin: 0.38rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
 }
 
 .watchInfoList {
@@ -1567,6 +1690,111 @@ a.uiButton {
   gap: 0.52rem;
 }
 
+.streamSettingsModal {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.streamSettingsCard {
+  border: 1px solid var(--line);
+  padding: 0.82rem 0.88rem;
+  display: grid;
+  gap: 0.72rem;
+}
+
+.streamSettingsCard h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.streamSettingsCard p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.streamSettingsActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.52rem;
+}
+
+.managerPrototypeSummary {
+  border: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.managerPrototypeSummary article {
+  border-right: 1px solid var(--line);
+  padding: 0.72rem 0.78rem;
+  min-width: 0;
+}
+
+.managerPrototypeSummary article:last-child {
+  border-right: 0;
+}
+
+.managerPrototypeSummary h4 {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.managerPrototypeSummary p {
+  margin: 0.34rem 0 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.managerInlineActions {
+  display: flex;
+  gap: 0.42rem;
+  flex-wrap: wrap;
+}
+
+.managerToggleGrid {
+  border: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.managerToggle {
+  border: 0;
+  border-right: 1px solid var(--line);
+  min-height: 56px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 0.62rem 0.68rem;
+  display: grid;
+  gap: 0.18rem;
+  cursor: pointer;
+}
+
+.managerToggle:last-child {
+  border-right: 0;
+}
+
+.managerToggle span {
+  font-size: 0.73rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.managerToggle strong {
+  font-size: 0.9rem;
+}
+
+.managerToggle.isActive {
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+}
+
 .voteModal {
   display: grid;
   gap: 0.9rem;
@@ -1802,7 +2030,9 @@ a.uiButton {
 .workspaceShell {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
-  min-height: calc(100vh - 72px);
+  min-height: calc(100vh - var(--topbar-height));
+  height: calc(100vh - var(--topbar-height));
+  overflow: hidden;
   background: var(--bg);
   gap: 0;
 }
@@ -1818,6 +2048,11 @@ a.uiButton {
   display: grid;
   align-content: start;
   height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .railBlock {
@@ -1911,6 +2146,8 @@ a.uiButton {
   min-width: 0;
   display: grid;
   grid-template-rows: auto auto 1fr;
+  height: 100%;
+  overflow: hidden;
 }
 
 .workspaceMain--manager {
@@ -1990,11 +2227,155 @@ a.uiButton {
 
 .workspaceContent {
   min-width: 0;
+  min-height: 0;
   overflow: auto;
   display: grid;
   align-content: start;
   background: var(--bg);
   gap: 0;
+}
+
+.stationHero {
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+  display: grid;
+  min-width: 0;
+}
+
+.stationHero__banner {
+  min-height: 132px;
+  border-bottom: 1px solid var(--line);
+  background:
+    linear-gradient(
+      120deg,
+      color-mix(in oklab, var(--accent) 20%, var(--bg)) 0%,
+      color-mix(in oklab, var(--accent-alt) 17%, var(--bg)) 100%
+    );
+  background-size: cover;
+  background-position: center;
+}
+
+.stationHero__body {
+  padding: 0.95rem 1rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.9rem;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.stationHero__logo {
+  width: 74px;
+  height: 74px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-strong);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.stationHero__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.stationHero__meta {
+  min-width: 0;
+  display: grid;
+  gap: 0.44rem;
+}
+
+.stationHero__eyebrow {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.stationHero__meta h2 {
+  margin: 0;
+  font-size: clamp(1.2rem, 2vw, 1.6rem);
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.stationHero__meta p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  max-width: 84ch;
+}
+
+.stationHero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.52rem;
+}
+
+.stationIdentityInputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.78rem;
+}
+
+.stationIdentityPreview {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  min-height: 174px;
+  display: grid;
+  grid-template-rows: 116px minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.stationIdentityPreview__banner {
+  border-bottom: 1px solid var(--line);
+  background:
+    linear-gradient(
+      120deg,
+      color-mix(in oklab, var(--accent) 24%, var(--bg)),
+      color-mix(in oklab, var(--accent-alt) 20%, var(--bg))
+    );
+  background-size: cover;
+  background-position: center;
+}
+
+.stationIdentityPreview__logo {
+  width: 72px;
+  height: 72px;
+  margin: -32px 0 0 0.92rem;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-strong);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.stationIdentityPreview__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.stationIdentityPreview--create {
+  margin-top: 0.12rem;
 }
 
 .workspaceSection {
@@ -2224,7 +2605,9 @@ a.uiButton {
   .workspaceShell,
   .workspaceShell--manager {
     grid-template-columns: 1fr;
+    height: auto;
     min-height: auto;
+    overflow: visible;
   }
 
   .authLayout {
@@ -2251,6 +2634,7 @@ a.uiButton {
 
   .workspaceRail {
     display: none;
+    overflow: visible;
   }
 
   .summaryStrip {
@@ -2289,11 +2673,37 @@ a.uiButton {
   .managerSplit__pane:last-child {
     border-bottom: 0;
   }
+
+  .stationHero__body {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .stationHero__actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .stationIdentityInputs {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 1080px) {
+  .watchPage {
+    height: auto;
+    overflow: visible;
+  }
+
   .watchGrid {
     grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .watchMainColumn,
+  .watchRail {
+    height: auto;
+    overflow: visible;
+    scrollbar-gutter: auto;
   }
 
   .watchRail {
@@ -2309,6 +2719,10 @@ a.uiButton {
 }
 
 @media (max-width: 920px) {
+  :root {
+    --topbar-height: 50px;
+  }
+
   .topbar__inner {
     min-height: 50px;
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -2358,6 +2772,11 @@ a.uiButton {
     height: 0.5rem;
   }
 
+  .watchStationAvatar {
+    width: 2.35rem;
+    height: 2.35rem;
+  }
+
   .routeFrame {
     padding: 0.75rem;
   }
@@ -2392,6 +2811,15 @@ a.uiButton {
     grid-template-columns: 1fr;
   }
 
+  .watchStationDetails__row {
+    grid-template-columns: 1fr;
+  }
+
+  .watchStationDetails__logo {
+    width: 56px;
+    height: 56px;
+  }
+
   .voteActions {
     grid-template-columns: 1fr;
   }
@@ -2418,6 +2846,32 @@ a.uiButton {
   .multicastCard__actions,
   .multicastOverview {
     grid-template-columns: 1fr;
+  }
+
+  .managerPrototypeSummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .managerPrototypeSummary article:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .managerPrototypeSummary article:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .streamSettingsActions,
+  .managerToggleGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .managerToggle {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .managerToggle:last-child {
+    border-bottom: 0;
   }
 
   .multicastOverview article {
@@ -2505,6 +2959,14 @@ a.uiButton {
 
   .inputGridTwo {
     grid-template-columns: 1fr;
+  }
+
+  .stationHero__body {
+    grid-template-columns: 1fr;
+  }
+
+  .stationHero__actions {
+    grid-column: auto;
   }
 
   .workspaceHead {
