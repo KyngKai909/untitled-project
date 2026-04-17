@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import AppIcon from "./AppIcon";
 
 interface AppHeaderProps {
   theme: "light" | "dark";
@@ -21,10 +22,16 @@ export default function AppHeader({ theme, onToggleTheme }: AppHeaderProps) {
 
         <nav className="topnav" aria-label="Primary">
           <NavLink to="/" className={navClass} end>
-            Login
+            <span className="uiInline">
+              <AppIcon name="user" />
+              Login
+            </span>
           </NavLink>
           <NavLink to="/dashboard" className={navClass}>
-            Workspace
+            <span className="uiInline">
+              <AppIcon name="home" />
+              Workspace
+            </span>
           </NavLink>
         </nav>
 

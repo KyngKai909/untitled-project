@@ -1,9 +1,11 @@
 import { ReactNode, useEffect } from "react";
+import AppIcon from "./AppIcon";
 
 interface OverlayPanelProps {
   open: boolean;
   onClose: () => void;
   title: string;
+  subtitle?: string;
   mode?: "center" | "left" | "right";
   children: ReactNode;
 }
@@ -12,6 +14,7 @@ export default function OverlayPanel({
   open,
   onClose,
   title,
+  subtitle,
   mode = "center",
   children
 }: OverlayPanelProps) {
@@ -44,9 +47,12 @@ export default function OverlayPanel({
         aria-label={title}
       >
         <header className="overlayPanel__head">
-          <h2>{title}</h2>
-          <button className="uiButton uiButton--ghost" type="button" onClick={onClose}>
-            Close
+          <div className="overlayPanel__title">
+            <h2>{title}</h2>
+            {subtitle ? <p>{subtitle}</p> : null}
+          </div>
+          <button className="overlayPanel__close" type="button" onClick={onClose} aria-label="Close panel">
+            <AppIcon name="close" />
           </button>
         </header>
         <div className="overlayPanel__body">{children}</div>
