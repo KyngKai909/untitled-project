@@ -163,7 +163,14 @@ export default function CreatorDashboardPage() {
       setDescription("");
       setStreamMode("video");
       setCreateModalOpen(false);
-      setInfo("Station created. Opening manager...");
+      setInfo(
+        [
+          "Station created. Opening manager...",
+          response.livepeerWarning ? `Livepeer warning: ${response.livepeerWarning}` : null
+        ]
+          .filter(Boolean)
+          .join(" ")
+      );
       await refreshStations();
       navigate(`/stations/${response.channel.id}`);
     } catch (err) {

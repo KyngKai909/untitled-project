@@ -140,6 +140,10 @@ function hasError(value: unknown): value is { error: string } {
   );
 }
 
+function statusForPayloadError(error: string): number {
+  return /not found/i.test(error) ? 404 : 400;
+}
+
 function getLivepeerConfigForChannel(db: { livepeerConfigs: LivepeerConfig[] }, channelId: string) {
   return db.livepeerConfigs.find((entry) => entry.channelId === channelId);
 }
@@ -159,6 +163,14 @@ function pickStreamUrl(channelId: string, livepeerConfig?: LivepeerConfig): stri
   }
 
   return `/hls/${channelId}/index.m3u8`;
+}
+
+function hasUsableDestination(destination: MultistreamDestination): boolean {
+  return Boolean(destination.enabled && destination.rtmpUrl.trim() && destination.streamKey.trim());
+}
+
+function hasEnabledCustomOutput(db: Pick<DatabaseSchema, "destinations">, channelId: string): boolean {
+  return db.destinations.some((destination) => destination.channelId === channelId && hasUsableDestination(destination));
 }
 
 function normalizeAssetType(value: unknown): AssetType {
@@ -970,7 +982,7 @@ app.post("/api/channels", async (req, res) => {
     return sendError(res, 400, "ownerWallet must be a valid wallet address.");
   }
 
-  const payload = await transaction((db) => {
+  const { channel } = await transaction((db) => {
     const slugBase = requestedSlug || slugify(name) || `channel-${db.channels.length + 1}`;
     const slug = uniqueSlug(slugBase, db.channels);
     const channel: Channel = {
@@ -995,7 +1007,23 @@ app.post("/api/channels", async (req, res) => {
     return { channel };
   });
 
-  res.status(201).json(payload);
+  let livepeer: ReturnType<typeof publicLivepeer>;
+  let livepeerWarning: string | undefined;
+
+  if (LIVEPEER_DEFAULT_ENABLED) {
+    if (!hasLivepeerApiKey()) {
+      livepeerWarning = "Livepeer auto-provision skipped because LIVEPEER_API_KEY is not configured.";
+    } else {
+      try {
+        const provisioned = await ensureLivepeerChannelConfig(channel.id);
+        livepeer = publicLivepeer(provisioned);
+      } catch (error) {
+        livepeerWarning = error instanceof Error ? error.message : "Livepeer auto-provision failed.";
+      }
+    }
+  }
+
+  res.status(201).json({ channel, livepeer, livepeerWarning });
 });
 
 app.get("/api/channels/:channelId", async (req, res) => {
@@ -1097,7 +1125,7 @@ app.patch("/api/channels/:channelId", async (req, res) => {
   });
 
   if (hasError(payload)) {
-    return sendError(res, 404, payload.error);
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
   }
 
   res.json(payload);
@@ -1160,7 +1188,7 @@ app.post("/api/channels/:channelId/folders", async (req, res) => {
   });
 
   if (hasError(payload)) {
-    return sendError(res, 404, payload.error);
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
   }
 
   res.status(201).json(payload);
@@ -1239,7 +1267,7 @@ app.delete("/api/folders/:folderId", async (req, res) => {
   });
 
   if (hasError(payload)) {
-    return sendError(res, 404, payload.error);
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
   }
 
   res.json(payload);
@@ -1291,7 +1319,7 @@ app.post("/api/channels/:channelId/schedules", async (req, res) => {
   });
 
   if (hasError(payload)) {
-    return sendError(res, 404, payload.error);
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
   }
 
   res.status(201).json(payload);
@@ -1360,7 +1388,7 @@ app.delete("/api/schedules/:scheduleId", async (req, res) => {
   });
 
   if (hasError(payload)) {
-    return sendError(res, 404, payload.error);
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
   }
 
   res.json(payload);
@@ -1656,7 +1684,7 @@ app.post("/api/channels/:channelId/radio/background", upload.single("file"), asy
   });
 
   if (hasError(payload)) {
-    return sendError(res, 404, payload.error);
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
   }
 
   res.status(201).json(payload);
@@ -1759,7 +1787,7 @@ app.post("/api/channels/:channelId/assets/external/jobs/:jobId/cancel", async (r
   });
 
   if (hasError(payload)) {
-    return sendError(res, 404, payload.error);
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
   }
 
   externalIngestAbortControllers.get(req.params.jobId)?.abort();
@@ -1785,7 +1813,7 @@ app.delete("/api/channels/:channelId/assets/external/jobs/:jobId", async (req, r
   });
 
   if (hasError(payload)) {
-    return sendError(res, 404, payload.error);
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
   }
 
   externalIngestAbortControllers.get(req.params.jobId)?.abort();
@@ -1829,7 +1857,7 @@ app.patch("/api/channels/:channelId/assets/external/jobs/:jobId/items/:itemId", 
   });
 
   if (hasError(payload)) {
-    return sendError(res, 404, payload.error);
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
   }
 
   res.json(payload);
@@ -1938,7 +1966,7 @@ app.patch("/api/assets/:assetId", async (req, res) => {
   });
 
   if (hasError(payload)) {
-    return sendError(res, 404, payload.error);
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
   }
 
   res.json(payload);
@@ -1982,7 +2010,7 @@ app.delete("/api/assets/:assetId", async (req, res) => {
   });
 
   if (hasError(payload)) {
-    return sendError(res, 404, payload.error);
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
   }
 
   res.json(payload);
@@ -2194,7 +2222,7 @@ app.delete("/api/channels/:channelId/playlist/items/:itemId", async (req, res) =
   });
 
   if (hasError(payload)) {
-    return sendError(res, 404, payload.error);
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
   }
 
   res.json(payload);
@@ -2249,10 +2277,40 @@ app.patch("/api/channels/:channelId/livepeer", async (req, res) => {
     return sendError(res, 400, "enabled boolean is required.");
   }
 
+  if (enabled) {
+    if (hasLivepeerApiKey()) {
+      try {
+        await ensureLivepeerChannelConfig(String(req.params.channelId));
+      } catch (error) {
+        return sendError(res, 500, error instanceof Error ? error.message : "Livepeer provisioning failed.");
+      }
+    } else {
+      const db = await readDb();
+      const channel = getChannel(db, req.params.channelId);
+      if (!channel) {
+        return sendError(res, 404, "Channel not found.");
+      }
+
+      const config = getLivepeerConfigForChannel(db, channel.id);
+      const hasProvisionedRoute = Boolean(config?.streamId && config?.streamKey && config?.playbackId && config?.ingestUrl);
+      if (!hasProvisionedRoute) {
+        return sendError(
+          res,
+          400,
+          "Cannot enable Livepeer because no provisioned route exists and LIVEPEER_API_KEY is not configured."
+        );
+      }
+    }
+  }
+
   const payload = await transaction((db) => {
     const channel = getChannel(db, req.params.channelId);
     if (!channel) {
       return { error: "Channel not found." };
+    }
+
+    if (!enabled && !hasEnabledCustomOutput(db, channel.id)) {
+      return { error: "Add and enable a custom RTMP output before disabling Livepeer." };
     }
 
     let config = getLivepeerConfigForChannel(db, channel.id);
@@ -2272,7 +2330,7 @@ app.patch("/api/channels/:channelId/livepeer", async (req, res) => {
   });
 
   if (hasError(payload)) {
-    return sendError(res, 404, payload.error);
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
   }
 
   res.json(payload);
@@ -2304,6 +2362,12 @@ app.post("/api/channels/:channelId/destinations", async (req, res) => {
       return { error: "Channel not found." };
     }
 
+    for (const existing of db.destinations) {
+      if (existing.channelId === channel.id) {
+        existing.enabled = false;
+      }
+    }
+
     const destination: MultistreamDestination = {
       id: uuidv4(),
       channelId: channel.id,
@@ -2319,7 +2383,7 @@ app.post("/api/channels/:channelId/destinations", async (req, res) => {
   });
 
   if (hasError(payload)) {
-    return sendError(res, 404, payload.error);
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
   }
 
   res.status(201).json(payload);
@@ -2340,13 +2404,36 @@ app.patch("/api/destinations/:destinationId", async (req, res) => {
     if (name) destination.name = name;
     if (rtmpUrl) destination.rtmpUrl = rtmpUrl;
     if (streamKey) destination.streamKey = streamKey;
-    if (typeof enabled === "boolean") destination.enabled = enabled;
+    if (typeof enabled === "boolean") {
+      const livepeerConfig = getLivepeerConfigForChannel(db, destination.channelId);
+      const livepeerEnabled = livepeerConfig?.enabled ?? LIVEPEER_DEFAULT_ENABLED;
+
+      if (enabled) {
+        for (const existing of db.destinations) {
+          if (existing.channelId === destination.channelId && existing.id !== destination.id) {
+            existing.enabled = false;
+          }
+        }
+        destination.enabled = true;
+      } else {
+        const hasOtherEnabledCustomOutput = db.destinations.some(
+          (entry) =>
+            entry.channelId === destination.channelId &&
+            entry.id !== destination.id &&
+            hasUsableDestination(entry)
+        );
+        if (!livepeerEnabled && !hasOtherEnabledCustomOutput) {
+          return { error: "Cannot disable the only custom output while Livepeer is disabled." };
+        }
+        destination.enabled = false;
+      }
+    }
 
     return { destination };
   });
 
   if (hasError(payload)) {
-    return sendError(res, 404, payload.error);
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
   }
 
   res.json(payload);
@@ -2359,12 +2446,27 @@ app.delete("/api/destinations/:destinationId", async (req, res) => {
       return { error: "Destination not found." };
     }
 
+    const destination = db.destinations[index];
+    const livepeerConfig = getLivepeerConfigForChannel(db, destination.channelId);
+    const livepeerEnabled = livepeerConfig?.enabled ?? LIVEPEER_DEFAULT_ENABLED;
+    if (destination.enabled && !livepeerEnabled) {
+      const hasOtherEnabledCustomOutput = db.destinations.some(
+        (entry, cursor) =>
+          cursor !== index &&
+          entry.channelId === destination.channelId &&
+          hasUsableDestination(entry)
+      );
+      if (!hasOtherEnabledCustomOutput) {
+        return { error: "Cannot delete the only active custom output while Livepeer is disabled." };
+      }
+    }
+
     const [removed] = db.destinations.splice(index, 1);
     return { removed };
   });
 
   if (hasError(payload)) {
-    return sendError(res, 404, payload.error);
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
   }
 
   res.json(payload);
@@ -2376,29 +2478,41 @@ app.post("/api/channels/:channelId/control", async (req: Request, res: Response)
     return sendError(res, 400, "action must be start|stop|skip|previous");
   }
 
+  const channelId = String(req.params.channelId);
   let livepeerProvisionError: string | undefined;
   let livepeerConfigSnapshot: ReturnType<typeof publicLivepeer>;
-  if (action === "start" && hasLivepeerApiKey()) {
-    try {
-      const config = await ensureLivepeerChannelConfig(String(req.params.channelId));
-      if (config.enabled) {
-        livepeerConfigSnapshot = publicLivepeer(config);
+  if (action === "start") {
+    const snapshot = await readDb();
+    const currentConfig = getLivepeerConfigForChannel(snapshot, channelId);
+    const livepeerEnabled = currentConfig?.enabled ?? LIVEPEER_DEFAULT_ENABLED;
+    if (livepeerEnabled && hasLivepeerApiKey()) {
+      try {
+        const config = await ensureLivepeerChannelConfig(channelId);
+        if (config.enabled) {
+          livepeerConfigSnapshot = publicLivepeer(config);
+        }
+      } catch (error) {
+        livepeerProvisionError = error instanceof Error ? error.message : "Livepeer provisioning failed.";
       }
-    } catch (error) {
-      livepeerProvisionError = error instanceof Error ? error.message : "Livepeer provisioning failed.";
-    }
-  } else if (action === "start") {
-    const db = await readDb();
-    const config = getLivepeerConfigForChannel(db, String(req.params.channelId));
-    if (config?.enabled) {
+    } else if (livepeerEnabled) {
       livepeerProvisionError = "Livepeer is enabled but LIVEPEER_API_KEY is not configured on the server.";
     }
   }
 
   const payload = await transaction((db) => {
-    const channel = getChannel(db, req.params.channelId);
+    const channel = getChannel(db, channelId);
     if (!channel) {
       return { error: "Channel not found." };
+    }
+
+    const livepeerConfig = getLivepeerConfigForChannel(db, channel.id);
+    const livepeerEnabled = livepeerConfig?.enabled ?? LIVEPEER_DEFAULT_ENABLED;
+    const hasLivepeerOutput = Boolean(livepeerEnabled && livepeerConfig?.ingestUrl && livepeerConfig?.streamKey);
+    const hasCustomOutput = hasEnabledCustomOutput(db, channel.id);
+    if (action === "start" && !hasLivepeerOutput && !hasCustomOutput) {
+      return {
+        error: "No broadcast output is configured. Keep Livepeer enabled or add and enable a custom RTMP output."
+      };
     }
 
     const command: PlayoutCommand = {
@@ -2423,16 +2537,16 @@ app.post("/api/channels/:channelId/control", async (req: Request, res: Response)
       state.queueIndex -= 1;
       state.currentProgramOffsetSec = 0;
     }
-    if (action === "start" && livepeerProvisionError) {
+    if (action === "start" && livepeerProvisionError && !hasCustomOutput) {
       state.lastError = `Livepeer setup error: ${livepeerProvisionError}`;
     }
     state.updatedAt = nowIso();
 
-    return { command, state, livepeer: livepeerConfigSnapshot };
+    return { command, state, livepeer: livepeerConfigSnapshot ?? publicLivepeer(livepeerConfig) };
   });
 
   if (hasError(payload)) {
-    return sendError(res, 404, payload.error);
+    return sendError(res, statusForPayloadError(payload.error), payload.error);
   }
 
   res.status(202).json(payload);

@@ -1,16 +1,18 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
+  createDestination,
   createStreamSchedule,
   deleteAsset,
+  deleteDestination,
   deleteStreamSchedule,
   getApiBase,
   getChannelDetail,
   getChannelStatus,
   importLibraryAssetsToChannel,
   listLibraryAssets,
+  patchDestination,
   patchChannel,
-  provisionLivepeer,
   putPlaylist,
   sendChannelControl,
   setLivepeerEnabled
@@ -199,6 +201,9 @@ export default function StationManagerPage() {
   const [adTriggerMode, setAdTriggerMode] = useState<"disabled" | "every_n_programs" | "time_interval">("every_n_programs");
   const [adInterval, setAdInterval] = useState(2);
   const [adTimeIntervalSec, setAdTimeIntervalSec] = useState(600);
+  const [destinationName, setDestinationName] = useState("");
+  const [destinationRtmpUrl, setDestinationRtmpUrl] = useState("");
+  const [destinationStreamKey, setDestinationStreamKey] = useState("");
 
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [importProgramsModalOpen, setImportProgramsModalOpen] = useState(false);
@@ -315,6 +320,10 @@ export default function StationManagerPage() {
     [detail]
   );
 
+  const activeCustomDestination = useMemo(() => {
+    return detail?.destinations.find((destination) => destination.enabled);
+  }, [detail]);
+
   const stationPrograms = useMemo(() => {
     return detail ? detail.assets.filter((asset) => asset.type === "program") : [];
   }, [detail]);
@@ -430,11 +439,15 @@ export default function StationManagerPage() {
   const monitorStats = useMemo(() => {
     return {
       health: detail?.state.isRunning ? "Healthy" : "Offline",
-      route: detail?.livepeer?.enabled ? "Livepeer" : "Direct HLS",
+      route: detail?.livepeer?.enabled
+        ? "Livepeer"
+        : activeCustomDestination
+          ? `Custom RTMP (${activeCustomDestination.name})`
+          : "Direct HLS",
       schedules: detail?.schedules.length ?? 0,
       queueDepth: detail?.playlist.length ?? 0
     };
-  }, [detail]);
+  }, [activeCustomDestination, detail]);
 
   function addProgramToDraft(assetId: string) {
     setQueueDraft((current) => [...current, assetId]);
@@ -686,28 +699,13 @@ export default function StationManagerPage() {
     }
   }
 
-  async function onProvisionLivepeer() {
+  async function onSetLivepeerRoute(enabled: boolean) {
     if (!channelId) {
       return;
     }
 
-    setBusy(true);
-    setError(null);
-    setInfo(null);
-
-    try {
-      await provisionLivepeer(channelId);
-      setInfo("Livepeer stream provisioned.");
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to provision Livepeer stream");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onToggleLivepeer(enabled: boolean) {
-    if (!channelId) {
+    if (!enabled && !activeCustomDestination) {
+      setError("Add and enable a custom RTMP output before switching away from Livepeer.");
       return;
     }
 
@@ -717,10 +715,70 @@ export default function StationManagerPage() {
 
     try {
       await setLivepeerEnabled(channelId, enabled);
-      setInfo(enabled ? "Livepeer output enabled." : "Livepeer output disabled.");
+      setInfo(enabled ? "Output route switched to Livepeer." : "Output route switched to custom RTMP.");
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update Livepeer setting");
+      setError(err instanceof Error ? err.message : "Failed to update output route");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onCreateDestination(event: FormEvent) {
+    event.preventDefault();
+    if (!channelId) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    setInfo(null);
+
+    try {
+      await createDestination(channelId, {
+        name: destinationName.trim(),
+        rtmpUrl: destinationRtmpUrl.trim(),
+        streamKey: destinationStreamKey.trim()
+      });
+      setDestinationName("");
+      setDestinationRtmpUrl("");
+      setDestinationStreamKey("");
+      setInfo("Custom output added and set as active destination.");
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add custom output destination");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onSetDestinationEnabled(destinationId: string, enabled: boolean) {
+    setBusy(true);
+    setError(null);
+    setInfo(null);
+
+    try {
+      await patchDestination(destinationId, { enabled });
+      setInfo(enabled ? "Custom output activated." : "Custom output disabled.");
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update custom output destination");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onDeleteDestination(destinationId: string) {
+    setBusy(true);
+    setError(null);
+    setInfo(null);
+
+    try {
+      await deleteDestination(destinationId);
+      setInfo("Custom output destination removed.");
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete custom output destination");
     } finally {
       setBusy(false);
     }
@@ -909,18 +967,23 @@ export default function StationManagerPage() {
                       <p>Real-time feed view using Livepeer when enabled, otherwise HLS stream.</p>
                     </div>
                     <div className="workspaceHead__actions">
-                      <button className="uiButton uiButton--secondary" type="button" onClick={() => void onProvisionLivepeer()} disabled={busy}>
-                        <AppIcon name="plus" />
-                        Provision Livepeer
+                      <button
+                        className="uiButton uiButton--secondary"
+                        type="button"
+                        onClick={() => void onSetLivepeerRoute(true)}
+                        disabled={busy || Boolean(detail.livepeer?.enabled)}
+                      >
+                        <AppIcon name="zap" />
+                        Use Livepeer Output
                       </button>
                       <button
                         className="uiButton uiButton--secondary"
                         type="button"
-                        onClick={() => void onToggleLivepeer(!(detail.livepeer?.enabled ?? false))}
-                        disabled={busy}
+                        onClick={() => void onSetLivepeerRoute(false)}
+                        disabled={busy || !activeCustomDestination || !detail.livepeer?.enabled}
                       >
-                        <AppIcon name={detail.livepeer?.enabled ? "stop" : "zap"} />
-                        {detail.livepeer?.enabled ? "Disable Livepeer" : "Enable Livepeer"}
+                        <AppIcon name="send" />
+                        Use Custom Output
                       </button>
                     </div>
                   </header>
@@ -938,6 +1001,107 @@ export default function StationManagerPage() {
                     ) : (
                       <p className="emptyState">Stream URL not available.</p>
                     )}
+                    <p className="metaLine">
+                      <span>Livepeer is the default broadcast route.</span>
+                      {activeCustomDestination ? (
+                        <span>Active custom output: {activeCustomDestination.name}</span>
+                      ) : (
+                        <span>Add a custom output before switching away from Livepeer.</span>
+                      )}
+                    </p>
+                  </div>
+                </section>
+
+                <section className="workspaceSection">
+                  <header className="workspaceSection__head">
+                    <div>
+                      <h2>Custom Output Destinations</h2>
+                      <p>
+                        Configure a single active RTMP destination for creators who want to run their own output
+                        infrastructure.
+                      </p>
+                    </div>
+                  </header>
+                  <div className="workspaceSection__body">
+                    {detail.destinations.length === 0 ? (
+                      <p className="emptyState">No custom outputs configured yet.</p>
+                    ) : (
+                      <div className="dataTable">
+                        {detail.destinations.map((destination) => (
+                          <article className="dataRow" key={destination.id}>
+                            <div>
+                              <h4 className="dataRow__title">{destination.name}</h4>
+                              <p className="dataRow__meta">
+                                {destination.rtmpUrl}
+                                <br />
+                                Key: {destination.streamKey ? "••••••••" : "(missing)"}
+                              </p>
+                            </div>
+                            <div className="dataRow__actions">
+                              <button
+                                className="uiButton uiButton--secondary"
+                                type="button"
+                                onClick={() => void onSetDestinationEnabled(destination.id, !destination.enabled)}
+                                disabled={busy}
+                              >
+                                {destination.enabled ? "Deactivate" : "Activate"}
+                              </button>
+                              <button
+                                className="uiButton uiButton--danger"
+                                type="button"
+                                onClick={() => void onDeleteDestination(destination.id)}
+                                disabled={busy}
+                              >
+                                <AppIcon name="trash" />
+                                Delete
+                              </button>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+
+                    <form className="fieldGrid" onSubmit={(event) => void onCreateDestination(event)}>
+                      <label className="field">
+                        <span>Destination Name</span>
+                        <input
+                          className="uiInput"
+                          value={destinationName}
+                          onChange={(event) => setDestinationName(event.target.value)}
+                          placeholder="My RTMP Endpoint"
+                          disabled={busy}
+                          required
+                        />
+                      </label>
+                      <label className="field">
+                        <span>RTMP URL</span>
+                        <input
+                          className="uiInput"
+                          value={destinationRtmpUrl}
+                          onChange={(event) => setDestinationRtmpUrl(event.target.value)}
+                          placeholder="rtmp://your-server/live"
+                          disabled={busy}
+                          required
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Stream Key</span>
+                        <input
+                          className="uiInput"
+                          value={destinationStreamKey}
+                          onChange={(event) => setDestinationStreamKey(event.target.value)}
+                          placeholder="your-stream-key"
+                          disabled={busy}
+                          required
+                        />
+                      </label>
+                      <div className="workspaceHead__actions">
+                        <button className="uiButton uiButton--accent" type="submit" disabled={busy}>
+                          <AppIcon name="plus" />
+                          Add Custom Output
+                        </button>
+                      </div>
+                    </form>
                   </div>
                 </section>
 

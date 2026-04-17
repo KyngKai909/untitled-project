@@ -576,6 +576,12 @@ a.uiButton {
   padding: 0.58rem;
 }
 
+.uiButton--compact {
+  min-height: 34px;
+  padding: 0.36rem 0.62rem;
+  font-size: 0.76rem;
+}
+
 .inlineAlert {
   border: 1px solid var(--line);
   padding: 0.86rem 1rem;
@@ -596,7 +602,6 @@ a.uiButton {
 
 .workspaceGrid,
 .opsGrid {
-  border: 1px solid var(--line-strong);
   background: var(--bg);
   display: grid;
   gap: 0;
@@ -1372,6 +1377,196 @@ a.uiButton {
   color: var(--text-muted);
 }
 
+.watchPanel--multicast .watchPanel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.72rem;
+}
+
+.watchPanel--multicast .watchPanel__head .uiButton {
+  flex: 0 0 auto;
+}
+
+.multicastBoard {
+  border: 1px solid var(--line);
+  display: grid;
+}
+
+.multicastRow {
+  border-bottom: 1px solid var(--line);
+  padding: 0.72rem 0.78rem;
+  display: grid;
+  gap: 0.62rem;
+  min-width: 0;
+}
+
+.multicastRow:last-child {
+  border-bottom: 0;
+}
+
+.multicastRow__identity {
+  display: flex;
+  gap: 0.62rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.multicastWordmark {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--line-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  font-family: "IBM Plex Mono", monospace;
+  flex: 0 0 auto;
+}
+
+.multicastWordmark--youtube {
+  border-color: color-mix(in oklab, #ff0033 58%, var(--line));
+  color: #ff2a4d;
+}
+
+.multicastWordmark--twitch {
+  border-color: color-mix(in oklab, #8a5eff 58%, var(--line));
+  color: #8a5eff;
+}
+
+.multicastWordmark--vimeo {
+  border-color: color-mix(in oklab, #11b7ff 58%, var(--line));
+  color: #11a9f5;
+}
+
+.multicastWordmark--tiktok {
+  border-color: color-mix(in oklab, #00e5cc 58%, var(--line));
+  color: #00d4bf;
+}
+
+.multicastWordmark--x {
+  border-color: color-mix(in oklab, var(--text) 62%, var(--line));
+  color: var(--text);
+}
+
+.multicastMeta {
+  min-width: 0;
+}
+
+.multicastMeta__name {
+  margin: 0;
+  font-size: 0.89rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.multicastMeta__handle {
+  margin: 0.24rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.multicastRow__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.multicastModal {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.multicastOverview {
+  border: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.multicastOverview article {
+  border-right: 1px solid var(--line);
+  padding: 0.72rem 0.78rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.multicastOverview article:last-child {
+  border-right: 0;
+}
+
+.multicastOverview h4 {
+  margin: 0;
+  font-size: 0.67rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.multicastOverview p {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.multicastStack {
+  border: 1px solid var(--line);
+  display: grid;
+}
+
+.multicastCard {
+  border-bottom: 1px solid var(--line);
+  padding: 0.82rem 0.86rem;
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.multicastCard:last-child {
+  border-bottom: 0;
+}
+
+.multicastCard__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.multicastCard__meta {
+  border: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.multicastCard__meta p {
+  margin: 0;
+  border-right: 1px solid var(--line);
+  padding: 0.56rem 0.62rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.multicastCard__meta p:last-child {
+  border-right: 0;
+}
+
+.multicastCard__meta strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.multicastCard__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.52rem;
+}
+
 .voteModal {
   display: grid;
   gap: 0.9rem;
@@ -1470,7 +1665,6 @@ a.uiButton {
 }
 
 .previewGrid {
-  border: 1px solid var(--line-strong);
   background: var(--bg);
   display: grid;
   grid-template-columns: minmax(0, 1fr) 350px;
@@ -2200,6 +2394,52 @@ a.uiButton {
 
   .voteActions {
     grid-template-columns: 1fr;
+  }
+
+  .watchPanel--multicast .watchPanel__head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .watchPanel--multicast .watchPanel__head .uiButton {
+    width: 100%;
+  }
+
+  .multicastRow__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .multicastRow__actions .statusPill {
+    justify-self: flex-start;
+    width: fit-content;
+  }
+
+  .multicastCard__actions,
+  .multicastOverview {
+    grid-template-columns: 1fr;
+  }
+
+  .multicastOverview article {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .multicastOverview article:last-child {
+    border-bottom: 0;
+  }
+
+  .multicastCard__meta {
+    grid-template-columns: 1fr;
+  }
+
+  .multicastCard__meta p {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .multicastCard__meta p:last-child {
+    border-bottom: 0;
   }
 
   .voteDirectionSwitch {

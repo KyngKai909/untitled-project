@@ -15,6 +15,7 @@ export const UPLOAD_ROOT = path.join(STORAGE_ROOT, "uploads");
 export const DB_PATH = path.join(STORAGE_ROOT, "db.json");
 export const DB_LOCK_PATH = path.join(STORAGE_ROOT, "db.lock");
 export const POLL_INTERVAL_MS = Number(process.env.WORKER_POLL_INTERVAL_MS ?? 1000);
+export const LIVEPEER_DEFAULT_ENABLED = String(process.env.LIVEPEER_DEFAULT_ENABLED ?? "true") !== "false";
 export const REDIS_URL = process.env.REDIS_URL?.trim() ?? "";
 export const REDIS_WORKER_LEADER_KEY = process.env.REDIS_WORKER_LEADER_KEY?.trim() || "opencast:worker:leader";
 export const REDIS_WORKER_LEASE_SEC = parsePositiveIntEnv(process.env.REDIS_WORKER_LEASE_SEC, 15);

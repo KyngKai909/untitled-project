@@ -91,6 +91,16 @@ export interface LivepeerStatus {
   updatedAt: string;
 }
 
+export interface MultistreamDestination {
+  id: string;
+  channelId: string;
+  name: string;
+  rtmpUrl: string;
+  streamKey: string;
+  enabled: boolean;
+  createdAt: string;
+}
+
 export interface ChannelSummary {
   channel: Channel;
   assetCount: number;
@@ -103,6 +113,7 @@ export interface ChannelDetail {
   schedules: StreamSchedule[];
   playlist: PlaylistItem[];
   state: PlayoutState;
+  destinations: MultistreamDestination[];
   livepeer?: LivepeerStatus;
   streamUrl: string;
 }

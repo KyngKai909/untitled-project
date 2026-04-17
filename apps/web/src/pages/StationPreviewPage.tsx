@@ -139,6 +139,71 @@ interface GuideEntry {
 }
 
 type VoteDirection = "previous" | "next";
+type MulticastStatus = "live" | "standby" | "idle";
+
+interface MulticastDestination {
+  id: string;
+  name: string;
+  wordmark: string;
+  handle: string;
+  region: string;
+  viewers: number;
+  active: boolean;
+  status: MulticastStatus;
+}
+
+const MULTICAST_DESTINATIONS: MulticastDestination[] = [
+  {
+    id: "youtube",
+    name: "YouTube",
+    wordmark: "YT",
+    handle: "@opencastcore",
+    region: "Global",
+    viewers: 281,
+    active: true,
+    status: "live"
+  },
+  {
+    id: "twitch",
+    name: "Twitch",
+    wordmark: "TW",
+    handle: "opencast_live",
+    region: "North America",
+    viewers: 97,
+    active: true,
+    status: "standby"
+  },
+  {
+    id: "vimeo",
+    name: "Vimeo",
+    wordmark: "VI",
+    handle: "OpenCast Broadcast",
+    region: "EMEA",
+    viewers: 42,
+    active: true,
+    status: "standby"
+  },
+  {
+    id: "tiktok",
+    name: "TikTok Live",
+    wordmark: "TT",
+    handle: "@opencast.tv",
+    region: "US East",
+    viewers: 0,
+    active: false,
+    status: "idle"
+  },
+  {
+    id: "x",
+    name: "X Live",
+    wordmark: "X",
+    handle: "@OpenCastCore",
+    region: "US West",
+    viewers: 0,
+    active: false,
+    status: "idle"
+  }
+];
 
 export default function StationPreviewPage() {
   const { channelId } = useParams();
@@ -153,6 +218,8 @@ export default function StationPreviewPage() {
   const [voteDirection, setVoteDirection] = useState<VoteDirection>("next");
   const [voteSubmitted, setVoteSubmitted] = useState(false);
   const [voteTally, setVoteTally] = useState({ previous: 38, next: 67 });
+  const [multicastModalOpen, setMulticastModalOpen] = useState(false);
+  const [multicastDestinations, setMulticastDestinations] = useState<MulticastDestination[]>(MULTICAST_DESTINATIONS);
 
   const load = useCallback(
     async (background: boolean) => {
@@ -351,6 +418,53 @@ export default function StationPreviewPage() {
   const selectedVotes = voteDirection === "next" ? voteTally.next : voteTally.previous;
   const selectedVotesNeeded = voteDirection === "next" ? nextVotesNeeded : previousVotesNeeded;
   const selectedDirectionLabel = voteDirection === "next" ? "Next" : "Previous";
+  const activeMulticast = useMemo(() => multicastDestinations.filter((destination) => destination.active), [multicastDestinations]);
+  const liveMulticast = useMemo(() => activeMulticast.filter((destination) => destination.status === "live"), [activeMulticast]);
+  const totalMulticastViewers = useMemo(
+    () => activeMulticast.reduce((total, destination) => total + destination.viewers, 0),
+    [activeMulticast]
+  );
+
+  function toggleMulticastDestination(destinationId: string) {
+    setMulticastDestinations((current) =>
+      current.map((destination) => {
+        if (destination.id !== destinationId) {
+          return destination;
+        }
+        if (destination.active) {
+          return { ...destination, active: false, status: "idle" };
+        }
+        return { ...destination, active: true, status: "standby" };
+      })
+    );
+  }
+
+  function cycleMulticastState(destinationId: string) {
+    setMulticastDestinations((current) =>
+      current.map((destination) => {
+        if (destination.id !== destinationId || !destination.active) {
+          return destination;
+        }
+        if (destination.status === "standby") {
+          return { ...destination, status: "live" };
+        }
+        if (destination.status === "live") {
+          return { ...destination, status: "standby" };
+        }
+        return { ...destination, status: "standby" };
+      })
+    );
+  }
+
+  function multicastStatusLabel(destination: MulticastDestination): string {
+    if (!destination.active) {
+      return "Disabled";
+    }
+    if (destination.status === "live") {
+      return "Live";
+    }
+    return "Standby";
+  }
 
   async function onCopyShareLink() {
     if (typeof window === "undefined") {
@@ -564,6 +678,55 @@ export default function StationPreviewPage() {
             </div>
           </section>
 
+          <section className="watchPanel watchPanel--multicast">
+            <header className="watchPanel__head">
+              <div>
+                <h2>Multicasting</h2>
+                <p>
+                  {activeMulticast.length} active destinations · {liveMulticast.length} live right now
+                </p>
+              </div>
+              <button className="uiButton uiButton--secondary" type="button" onClick={() => setMulticastModalOpen(true)}>
+                <AppIcon name="list" />
+                Manage
+              </button>
+            </header>
+            <div className="watchPanel__body">
+              <section className="multicastBoard" aria-label="Multicast Destinations">
+                {multicastDestinations.map((destination) => (
+                  <article className="multicastRow" key={destination.id}>
+                    <div className="multicastRow__identity">
+                      <span className={`multicastWordmark multicastWordmark--${destination.id}`}>{destination.wordmark}</span>
+                      <div className="multicastMeta">
+                        <p className="multicastMeta__name">{destination.name}</p>
+                        <p className="multicastMeta__handle">{destination.handle}</p>
+                      </div>
+                    </div>
+                    <div className="multicastRow__actions">
+                      <span
+                        className={`statusPill ${
+                          destination.status === "live"
+                            ? "statusPill--live"
+                            : destination.active
+                              ? ""
+                              : "statusPill--off"
+                        }`}
+                      >
+                        {multicastStatusLabel(destination)}
+                      </span>
+                      <button className="uiButton uiButton--ghost uiButton--compact" type="button" onClick={() => toggleMulticastDestination(destination.id)}>
+                        {destination.active ? "Disable" : "Enable"}
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </section>
+              <p className="emptyState">
+                Prototype only. Destination auth, stream keys, and publish health can be wired to your routing service later.
+              </p>
+            </div>
+          </section>
+
           <section className="watchPanel">
             <header className="watchPanel__head">
               <div>
@@ -634,6 +797,96 @@ export default function StationPreviewPage() {
           </section>
         </aside>
       </section>
+
+      <OverlayPanel
+        open={multicastModalOpen}
+        onClose={() => setMulticastModalOpen(false)}
+        title="Multicast Destinations"
+        subtitle="Prototype control center for outbound platform distribution."
+        mode="right"
+      >
+        <div className="multicastModal">
+          <section className="multicastOverview">
+            <article>
+              <h4>Active</h4>
+              <p>
+                {activeMulticast.length} / {multicastDestinations.length}
+              </p>
+            </article>
+            <article>
+              <h4>Live</h4>
+              <p>{liveMulticast.length}</p>
+            </article>
+            <article>
+              <h4>Concurrent Viewers</h4>
+              <p>{totalMulticastViewers}</p>
+            </article>
+          </section>
+
+          <section className="multicastStack">
+            {multicastDestinations.map((destination) => (
+              <article className="multicastCard" key={`modal-${destination.id}`}>
+                <div className="multicastCard__head">
+                  <div className="multicastRow__identity">
+                    <span className={`multicastWordmark multicastWordmark--${destination.id}`}>{destination.wordmark}</span>
+                    <div className="multicastMeta">
+                      <p className="multicastMeta__name">{destination.name}</p>
+                      <p className="multicastMeta__handle">{destination.handle}</p>
+                    </div>
+                  </div>
+                  <span
+                    className={`statusPill ${
+                      destination.status === "live"
+                        ? "statusPill--live"
+                        : destination.active
+                          ? ""
+                          : "statusPill--off"
+                    }`}
+                  >
+                    {multicastStatusLabel(destination)}
+                  </span>
+                </div>
+
+                <div className="multicastCard__meta">
+                  <p>
+                    Region <strong>{destination.region}</strong>
+                  </p>
+                  <p>
+                    Viewers <strong>{destination.active ? destination.viewers : 0}</strong>
+                  </p>
+                </div>
+
+                <div className="multicastCard__actions">
+                  <button className="uiButton uiButton--secondary uiButton--compact" type="button" onClick={() => toggleMulticastDestination(destination.id)}>
+                    <AppIcon name={destination.active ? "stop" : "plus"} />
+                    {destination.active ? "Disable Route" : "Enable Route"}
+                  </button>
+                  <button
+                    className="uiButton uiButton--ghost uiButton--compact"
+                    type="button"
+                    onClick={() => cycleMulticastState(destination.id)}
+                    disabled={!destination.active}
+                  >
+                    <AppIcon name={destination.status === "live" ? "refresh" : "zap"} />
+                    {destination.status === "live" ? "Move To Standby" : "Mark Live"}
+                  </button>
+                </div>
+              </article>
+            ))}
+          </section>
+
+          <div className="modalActions">
+            <button className="uiButton uiButton--accent" type="button" onClick={() => setMulticastModalOpen(false)}>
+              <AppIcon name="zap" />
+              Save Prototype Layout
+            </button>
+            <button className="uiButton uiButton--secondary" type="button" onClick={() => setMulticastModalOpen(false)}>
+              <AppIcon name="close" />
+              Close
+            </button>
+          </div>
+        </div>
+      </OverlayPanel>
 
       <OverlayPanel
         open={voteModalOpen}

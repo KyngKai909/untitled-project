@@ -6,10 +6,11 @@ import type {
   Channel,
   DatabaseSchema,
   LivepeerConfig,
+  MultistreamDestination,
   PlayoutCommand,
   PlayoutState
 } from "@openchannel/shared";
-import { HLS_ROOT, MEDIA_BASE_URL, POLL_INTERVAL_MS, UPLOAD_ROOT } from "./config.js";
+import { HLS_ROOT, LIVEPEER_DEFAULT_ENABLED, MEDIA_BASE_URL, POLL_INTERVAL_MS, UPLOAD_ROOT } from "./config.js";
 import { getChannel, getOrCreatePlayoutState, readDb, transaction } from "./db.js";
 import { resetChannelOutput, startHlsSegmenter, type FfmpegSession } from "./ffmpeg.js";
 import { closeRedis, refreshLeadershipLease, releaseLeadershipLease } from "./redis.js";
@@ -141,6 +142,29 @@ function chooseNextAsset(channel: Channel, state: PlayoutState, db: DatabaseSche
 
 function getLivepeerConfig(db: DatabaseSchema, channelId: string): LivepeerConfig | undefined {
   return db.livepeerConfigs.find((entry) => entry.channelId === channelId);
+}
+
+function getEnabledDestination(db: DatabaseSchema, channelId: string): MultistreamDestination | undefined {
+  return db.destinations.find(
+    (destination) =>
+      destination.channelId === channelId &&
+      destination.enabled &&
+      destination.rtmpUrl.trim().length > 0 &&
+      destination.streamKey.trim().length > 0
+  );
+}
+
+function toDestinationIngestUrl(destination: MultistreamDestination | undefined): string | undefined {
+  if (!destination) {
+    return undefined;
+  }
+
+  const base = destination.rtmpUrl.trim().replace(/\/+$/, "");
+  const key = destination.streamKey.trim().replace(/^\/+/, "");
+  if (!base || !key) {
+    return undefined;
+  }
+  return `${base}/${key}`;
 }
 
 function toUploadRelativePath(localPath: string): string | undefined {
@@ -277,7 +301,10 @@ class ChannelRuntime {
         break;
       }
       const livepeerConfig = getLivepeerConfig(db, this.channelId);
-      const livepeerIngestUrl = livepeerConfig?.enabled ? livepeerConfig.ingestUrl : undefined;
+      const livepeerEnabled = livepeerConfig?.enabled ?? LIVEPEER_DEFAULT_ENABLED;
+      const livepeerIngestUrl = livepeerEnabled ? livepeerConfig?.ingestUrl : undefined;
+      const customIngestUrl = !livepeerEnabled ? toDestinationIngestUrl(getEnabledDestination(db, this.channelId)) : undefined;
+      const activeIngestUrl = livepeerIngestUrl ?? customIngestUrl;
 
       const next = chooseNextAsset(channel, state, db);
       if (!next) {
@@ -316,7 +343,7 @@ class ChannelRuntime {
         radioBackgroundPath,
         startOffsetSec: next.playbackOffsetSec,
         maxDurationSec: next.playbackDurationSec,
-        livepeerIngestUrl
+        livepeerIngestUrl: activeIngestUrl
       });
       const result = await this.currentSession.finished;
       this.currentSession = undefined;

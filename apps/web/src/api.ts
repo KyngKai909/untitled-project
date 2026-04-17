@@ -6,6 +6,7 @@ import type {
   ChannelDetail,
   ChannelSummary,
   LivepeerStatus,
+  MultistreamDestination,
   PlayoutState,
   StreamMode,
   StreamSchedule
@@ -132,7 +133,7 @@ export async function createChannel(input: {
   brandColor?: string;
   streamMode?: StreamMode;
 }) {
-  return request<{ channel: Channel }>(`/api/channels`, {
+  return request<{ channel: Channel; livepeer?: LivepeerStatus; livepeerWarning?: string }>(`/api/channels`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -313,5 +314,42 @@ export async function setLivepeerEnabled(
       "Content-Type": "application/json"
     },
     body: JSON.stringify({ enabled })
+  });
+}
+
+export async function listDestinations(channelId: string): Promise<MultistreamDestination[]> {
+  const payload = await request<{ destinations: MultistreamDestination[] }>(`/api/channels/${channelId}/destinations`);
+  return payload.destinations;
+}
+
+export async function createDestination(
+  channelId: string,
+  input: { name: string; rtmpUrl: string; streamKey: string }
+): Promise<{ destination: MultistreamDestination }> {
+  return request(`/api/channels/${channelId}/destinations`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(input)
+  });
+}
+
+export async function patchDestination(
+  destinationId: string,
+  input: { name?: string; rtmpUrl?: string; streamKey?: string; enabled?: boolean }
+): Promise<{ destination: MultistreamDestination }> {
+  return request(`/api/destinations/${destinationId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(input)
+  });
+}
+
+export async function deleteDestination(destinationId: string): Promise<{ removed: MultistreamDestination }> {
+  return request(`/api/destinations/${destinationId}`, {
+    method: "DELETE"
   });
 }
