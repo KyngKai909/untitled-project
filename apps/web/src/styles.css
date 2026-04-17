@@ -903,13 +903,13 @@ a.uiButton {
 }
 
 .watchBroadcast {
-  border: 1px solid var(--line-strong);
   background: var(--surface-strong);
   display: grid;
   min-width: 0;
 }
 
 .watchBroadcast__head {
+  border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   padding: 1rem 1.05rem;
   display: flex;
@@ -918,10 +918,15 @@ a.uiButton {
   gap: 0.9rem;
 }
 
+.watchBroadcast__title {
+  min-width: 0;
+}
+
 .watchBroadcast__head h1 {
-  margin: 0.6rem 0 0;
+  margin: 0.56rem 0 0;
   font-size: clamp(1.42rem, 2.9vw, 2.12rem);
   line-height: 1.08;
+  overflow-wrap: anywhere;
 }
 
 .watchBroadcast__head p {
@@ -940,9 +945,16 @@ a.uiButton {
 
 .watchBroadcast__player {
   border-bottom: 1px solid var(--line);
-  padding: 1rem;
   display: grid;
-  gap: 0.8rem;
+  gap: 0;
+}
+
+.watchBroadcast__player .fieldGrid {
+  gap: 0;
+}
+
+.watchBroadcast__player .mediaShell {
+  border: 0;
 }
 
 .watchNow {
@@ -983,7 +995,14 @@ a.uiButton {
   border: 1px solid var(--line-strong);
   background: var(--line-strong);
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+  gap: 1px;
+}
+
+.watchMainColumn {
+  background: var(--line-strong);
+  min-width: 0;
+  display: grid;
   gap: 1px;
 }
 
@@ -1021,6 +1040,7 @@ a.uiButton {
 .watchRail {
   background: var(--line-strong);
   display: grid;
+  align-content: start;
   gap: 1px;
 }
 
@@ -1716,7 +1736,6 @@ a.uiButton {
   }
 
   .watchBroadcast__head,
-  .watchBroadcast__player,
   .watchNow,
   .watchPanel__head,
   .watchPanel__body {

@@ -328,154 +328,94 @@ export default function StationPreviewPage() {
 
   if (!channelId) {
     return (
-      <main className="routeFrame watchPage">
+      <main className="routeFrame routeFrame--workspace watchPage">
         <div className="inlineAlert inlineAlert--error">Channel id is missing.</div>
       </main>
     );
   }
 
   return (
-    <main className="routeFrame watchPage">
-      <section className="watchBroadcast">
-        <header className="watchBroadcast__head">
-          <div>
-            <div className="pageBanner__meta">
-              <span className="miniTag miniTag--accent">Public Stream Viewer</span>
-              {detail ? (
-                <span className={`statusPill ${detail.state.isRunning ? "statusPill--live" : "statusPill--off"}`}>
-                  {detail.state.isRunning ? "Live" : "Off Air"}
-                </span>
-              ) : (
-                <span className="statusPill">Connecting</span>
-              )}
-              {refreshing ? <span className="miniTag">Refreshing</span> : null}
-            </div>
-            <h1>{detail?.channel.name ?? "Loading Broadcast"}</h1>
-            <p>
-              {detail?.channel.description?.trim() ||
-                "Share this page for viewers to watch live playback, track what is on now, and follow the lineup guide."}
-            </p>
-          </div>
-          <div className="watchBroadcast__actions">
-            <button className="uiButton uiButton--accent" type="button" onClick={() => void onCopyShareLink()}>
-              Share Stream
-            </button>
-            <Link className="uiButton uiButton--secondary" to={`/stations/${channelId}`}>
-              Open Studio
-            </Link>
-            <Link className="uiButton uiButton--secondary" to="/dashboard">
-              Workspace
-            </Link>
-          </div>
-        </header>
-        <div className="watchBroadcast__player">
-          {initialLoading && !detail ? (
-            <p className="loadingState">Loading broadcast...</p>
-          ) : livepeerEmbedUrl ? (
-            <div className="mediaShell">
-              <iframe
-                src={livepeerEmbedUrl}
-                title="Livepeer Player"
-                allow="autoplay; fullscreen; picture-in-picture"
-              />
-            </div>
-          ) : stableStreamUrl || streamUrl ? (
-            <HlsPlayer src={stableStreamUrl || streamUrl} muted={false} />
-          ) : (
-            <p className="emptyState">No stream URL available yet.</p>
-          )}
-        </div>
-        <section className="watchNow">
-          <div className="watchNow__title">
-            <h2>{detail?.state.currentAssetTitle ?? nowPlaying?.asset.title ?? "No Program Live Right Now"}</h2>
-            <p>
-              {nowPlaying?.durationSec
-                ? `${formatDuration(nowPlaying.durationSec)} total · started ${formatTimeFromMs(
-                    nowPlaying.startMs ?? currentStartMs
-                  )}`
-                : "Program timing appears when the playlist is active."}
-            </p>
-          </div>
-          <div className="watchNow__meter">
-            <p className="metaLine">
-              <span>Elapsed {formatDuration(playbackProgress.elapsedSec)}</span>
-              <span>Remaining {formatDuration(playbackProgress.remainingSec)}</span>
-            </p>
-            <div className="progressBar">
-              <span style={{ width: `${playbackProgress.percent}%` }} />
-            </div>
-          </div>
-          {shareMessage ? <p className="watchFlash">{shareMessage}</p> : null}
-        </section>
-      </section>
-
+    <main className="routeFrame routeFrame--workspace watchPage">
       {error ? <div className="inlineAlert inlineAlert--error">{error}</div> : null}
 
       <section className="watchGrid">
-        <section className="watchPanel">
-          <header className="watchPanel__head">
-            <div>
-              <h2>Program Guide</h2>
-              <p>{guideDateLabel}</p>
-            </div>
-          </header>
-          <div className="watchPanel__body">
-            {guideEntries.length === 0 ? (
-              <p className="emptyState">No lineup available yet. Add programs in studio to populate this guide.</p>
-            ) : (
-              <div className="guideTable" role="table" aria-label="Program Guide">
-                <div className="guideRow guideRow--head" role="row">
-                  <p>Time</p>
-                  <p>Program</p>
-                  <p>Length</p>
-                  <p>Status</p>
+        <section className="watchMainColumn">
+          <section className="watchBroadcast">
+            <div className="watchBroadcast__player">
+              {initialLoading && !detail ? (
+                <p className="loadingState">Loading broadcast...</p>
+              ) : livepeerEmbedUrl ? (
+                <div className="mediaShell">
+                  <iframe
+                    src={livepeerEmbedUrl}
+                    title="Livepeer Player"
+                    allow="autoplay; fullscreen; picture-in-picture"
+                  />
                 </div>
-                {guideEntries.map((entry) => (
-                  <article className={`guideRow ${entry.isNow ? "guideRow--live" : ""}`} key={`${entry.asset.id}-${entry.slot}`} role="row">
-                    <p>
-                      {formatTimeFromMs(entry.startMs)} - {formatTimeFromMs(entry.endMs)}
-                    </p>
-                    <p className="guideRow__title">{entry.asset.title}</p>
-                    <p>{formatDuration(entry.durationSec)}</p>
-                    <p>{entry.isNow ? "Now" : "Up Next"}</p>
-                  </article>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
+              ) : stableStreamUrl || streamUrl ? (
+                <HlsPlayer src={stableStreamUrl || streamUrl} muted={false} />
+              ) : (
+                <p className="emptyState">No stream URL available yet.</p>
+              )}
+            </div>
 
-        <aside className="watchRail">
-          <section className="watchPanel">
-            <header className="watchPanel__head">
-              <div>
-                <h2>Station Info</h2>
-                <p>Channel metadata and runtime snapshot.</p>
+            <header className="watchBroadcast__head">
+              <div className="watchBroadcast__title">
+                <div className="pageBanner__meta">
+                  <span className="miniTag miniTag--accent">Public Stream Viewer</span>
+                  {detail ? (
+                    <span className={`statusPill ${detail.state.isRunning ? "statusPill--live" : "statusPill--off"}`}>
+                      {detail.state.isRunning ? "Live" : "Off Air"}
+                    </span>
+                  ) : (
+                    <span className="statusPill">Connecting</span>
+                  )}
+                  {refreshing ? <span className="miniTag">Refreshing</span> : null}
+                </div>
+                <h1>{detail?.channel.name ?? "Loading Broadcast"}</h1>
+                <p>
+                  {detail?.channel.description?.trim() ||
+                    "Share this page for viewers to watch live playback, track what is on now, and follow the lineup guide."}
+                </p>
+              </div>
+              <div className="watchBroadcast__actions">
+                <button className="uiButton uiButton--accent" type="button" onClick={() => void onCopyShareLink()}>
+                  Share Stream
+                </button>
+                <Link className="uiButton uiButton--secondary" to={`/stations/${channelId}`}>
+                  Open Studio
+                </Link>
+                <Link className="uiButton uiButton--secondary" to="/dashboard">
+                  Workspace
+                </Link>
               </div>
             </header>
-            <div className="watchPanel__body">
-              <dl className="watchInfoList">
-                <div>
-                  <dt>Stream Mode</dt>
-                  <dd>{detail?.channel.streamMode ?? "--"}</dd>
+
+            <section className="watchNow">
+              <div className="watchNow__title">
+                <h2>{detail?.state.currentAssetTitle ?? nowPlaying?.asset.title ?? "No Program Live Right Now"}</h2>
+                <p>
+                  {nowPlaying?.durationSec
+                    ? `${formatDuration(nowPlaying.durationSec)} total · started ${formatTimeFromMs(
+                        nowPlaying.startMs ?? currentStartMs
+                      )}`
+                    : "Program timing appears when the playlist is active."}
+                </p>
+              </div>
+              <div className="watchNow__meter">
+                <p className="metaLine">
+                  <span>Elapsed {formatDuration(playbackProgress.elapsedSec)}</span>
+                  <span>Remaining {formatDuration(playbackProgress.remainingSec)}</span>
+                </p>
+                <div className="progressBar">
+                  <span style={{ width: `${playbackProgress.percent}%` }} />
                 </div>
-                <div>
-                  <dt>Output Route</dt>
-                  <dd>{detail?.livepeer?.enabled ? "Livepeer" : "Direct HLS"}</dd>
-                </div>
-                <div>
-                  <dt>Started</dt>
-                  <dd>{formatDateTime(detail?.state.currentStartedAt)}</dd>
-                </div>
-                <div>
-                  <dt>Updated</dt>
-                  <dd>{formatDateTime(detail?.state.updatedAt)}</dd>
-                </div>
-              </dl>
-            </div>
+              </div>
+              {shareMessage ? <p className="watchFlash">{shareMessage}</p> : null}
+            </section>
           </section>
 
-          <section className="watchPanel">
+          <section className="watchPanel watchPanel--comments">
             <header className="watchPanel__head">
               <div>
                 <h2>Comments</h2>
@@ -503,6 +443,70 @@ export default function StationPreviewPage() {
                   Send
                 </button>
               </div>
+            </div>
+          </section>
+        </section>
+
+        <aside className="watchRail">
+          <section className="watchPanel">
+            <header className="watchPanel__head">
+              <div>
+                <h2>Program Guide</h2>
+                <p>{guideDateLabel}</p>
+              </div>
+            </header>
+            <div className="watchPanel__body">
+              {guideEntries.length === 0 ? (
+                <p className="emptyState">No lineup available yet. Add programs in studio to populate this guide.</p>
+              ) : (
+                <div className="guideTable" role="table" aria-label="Program Guide">
+                  <div className="guideRow guideRow--head" role="row">
+                    <p>Time</p>
+                    <p>Program</p>
+                    <p>Length</p>
+                    <p>Status</p>
+                  </div>
+                  {guideEntries.map((entry) => (
+                    <article className={`guideRow ${entry.isNow ? "guideRow--live" : ""}`} key={`${entry.asset.id}-${entry.slot}`} role="row">
+                      <p>
+                        {formatTimeFromMs(entry.startMs)} - {formatTimeFromMs(entry.endMs)}
+                      </p>
+                      <p className="guideRow__title">{entry.asset.title}</p>
+                      <p>{formatDuration(entry.durationSec)}</p>
+                      <p>{entry.isNow ? "Now" : "Up Next"}</p>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section className="watchPanel">
+            <header className="watchPanel__head">
+              <div>
+                <h2>Station Info</h2>
+                <p>Channel metadata and runtime snapshot.</p>
+              </div>
+            </header>
+            <div className="watchPanel__body">
+              <dl className="watchInfoList">
+                <div>
+                  <dt>Stream Mode</dt>
+                  <dd>{detail?.channel.streamMode ?? "--"}</dd>
+                </div>
+                <div>
+                  <dt>Output Route</dt>
+                  <dd>{detail?.livepeer?.enabled ? "Livepeer" : "Direct HLS"}</dd>
+                </div>
+                <div>
+                  <dt>Started</dt>
+                  <dd>{formatDateTime(detail?.state.currentStartedAt)}</dd>
+                </div>
+                <div>
+                  <dt>Updated</dt>
+                  <dd>{formatDateTime(detail?.state.updatedAt)}</dd>
+                </div>
+              </dl>
             </div>
           </section>
         </aside>
