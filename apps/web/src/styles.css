@@ -914,7 +914,7 @@ a.uiButton {
 }
 
 .watchPlayerFrame {
-  width: min(980px, 100%);
+  width: min(860px, 100%);
   margin: 0 auto;
   border: 1px solid var(--line);
   background: #000;
@@ -1065,45 +1065,73 @@ a.uiButton {
 .guideTable {
   border: 1px solid var(--line);
   background: var(--surface);
+  display: grid;
 }
 
-.guideRow {
+.guideTable__head {
   display: grid;
-  grid-template-columns: minmax(150px, 0.9fr) minmax(0, 1.8fr) 100px 78px;
-  align-items: center;
+  grid-template-columns: 130px minmax(0, 1fr) auto;
   gap: 0.65rem;
   border-bottom: 1px solid var(--line);
-  padding: 0.72rem 0.78rem;
-}
-
-.guideRow:last-child {
-  border-bottom: 0;
-}
-
-.guideRow p {
-  margin: 0;
-  font-size: 0.88rem;
-  overflow-wrap: anywhere;
-}
-
-.guideRow--head {
+  padding: 0.58rem 0.72rem;
   background: var(--surface-strong);
 }
 
-.guideRow--head p {
-  font-size: 0.7rem;
+.guideTable__head p {
+  margin: 0;
+  font-size: 0.68rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-family: "IBM Plex Mono", monospace;
   color: var(--text-muted);
 }
 
-.guideRow--live {
+.guideTable__body {
+  display: grid;
+}
+
+.guideItem {
+  border-bottom: 1px solid var(--line);
+  padding: 0.72rem 0.78rem;
+  display: grid;
+  gap: 0.34rem;
+}
+
+.guideItem:last-child {
+  border-bottom: 0;
+}
+
+.guideItem--live {
   background: color-mix(in oklab, var(--accent-soft) 44%, var(--surface));
 }
 
-.guideRow__title {
+.guideItem__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.58rem;
+}
+
+.guideItem__time {
+  margin: 0;
+  font-size: 0.74rem;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.guideItem__title {
+  margin: 0;
+  font-size: 0.92rem;
   font-weight: 600;
+  line-height: 1.24;
+  word-break: break-word;
+}
+
+.guideItem__meta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
 .watchInfoList {
@@ -1766,12 +1794,13 @@ a.uiButton {
     padding-right: 0.9rem;
   }
 
-  .guideRow {
-    grid-template-columns: minmax(112px, 0.9fr) minmax(0, 1fr) 72px;
+  .guideTable__head {
+    grid-template-columns: minmax(110px, 1fr) minmax(0, 1fr) auto;
+    gap: 0.45rem;
   }
 
-  .guideRow p:last-child {
-    display: none;
+  .guideItem__top {
+    gap: 0.45rem;
   }
 
   .watchInfoList > div {

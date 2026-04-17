@@ -463,24 +463,31 @@ export default function StationPreviewPage() {
               {guideEntries.length === 0 ? (
                 <p className="emptyState">No lineup available yet. Add programs in studio to populate this guide.</p>
               ) : (
-                <div className="guideTable" role="table" aria-label="Program Guide">
-                  <div className="guideRow guideRow--head" role="row">
+                <section className="guideTable" aria-label="Program Guide">
+                  <div className="guideTable__head">
                     <p>Time</p>
                     <p>Program</p>
-                    <p>Length</p>
                     <p>Status</p>
                   </div>
-                  {guideEntries.map((entry) => (
-                    <article className={`guideRow ${entry.isNow ? "guideRow--live" : ""}`} key={`${entry.asset.id}-${entry.slot}`} role="row">
-                      <p>
-                        {formatTimeFromMs(entry.startMs)} - {formatTimeFromMs(entry.endMs)}
-                      </p>
-                      <p className="guideRow__title">{entry.asset.title}</p>
-                      <p>{formatDuration(entry.durationSec)}</p>
-                      <p>{entry.isNow ? "Now" : "Up Next"}</p>
-                    </article>
-                  ))}
-                </div>
+                  <div className="guideTable__body">
+                    {guideEntries.map((entry) => (
+                      <article className={`guideItem ${entry.isNow ? "guideItem--live" : ""}`} key={`${entry.asset.id}-${entry.slot}`}>
+                        <div className="guideItem__top">
+                          <p className="guideItem__time">
+                            {formatTimeFromMs(entry.startMs)} - {formatTimeFromMs(entry.endMs)}
+                          </p>
+                          <span className={`statusPill ${entry.isNow ? "statusPill--live" : "statusPill--off"}`}>
+                            {entry.isNow ? "Now" : "Up Next"}
+                          </span>
+                        </div>
+                        <p className="guideItem__title" title={entry.asset.title}>
+                          {entry.asset.title}
+                        </p>
+                        <p className="guideItem__meta">Length {formatDuration(entry.durationSec)}</p>
+                      </article>
+                    ))}
+                  </div>
+                </section>
               )}
             </div>
           </section>
