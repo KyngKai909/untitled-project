@@ -331,10 +331,26 @@ export default function StationPreviewPage() {
   }, [currentProgramIndex, programLineup]);
 
   const nextProgram = guideEntries[1]?.asset;
+  const voteWindowSeconds = nowPlaying?.durationSec ?? 0;
+  const votePeakConcurrent = useMemo(() => {
+    if (!voteWindowSeconds) {
+      return 0;
+    }
+    const durationMinutes = voteWindowSeconds / 60;
+    const queueFactor = Math.max(0, Math.min(20, programLineup.length));
+    const estimate = Math.round(42 + durationMinutes * 3.6 + queueFactor);
+    return Math.max(24, Math.min(500, estimate));
+  }, [programLineup.length, voteWindowSeconds]);
+  const voteSupermajorityRequired = votePeakConcurrent > 0 ? Math.ceil(votePeakConcurrent * 0.66) : 0;
   const voteTarget = voteDirection === "next" ? nextProgram : previousProgram;
   const voteTotal = voteTally.previous + voteTally.next;
-  const previousVotePct = voteTotal > 0 ? Math.round((voteTally.previous / voteTotal) * 100) : 0;
-  const nextVotePct = voteTotal > 0 ? Math.round((voteTally.next / voteTotal) * 100) : 0;
+  const previousVotePct = voteSupermajorityRequired > 0 ? Math.min(100, Math.round((voteTally.previous / voteSupermajorityRequired) * 100)) : 0;
+  const nextVotePct = voteSupermajorityRequired > 0 ? Math.min(100, Math.round((voteTally.next / voteSupermajorityRequired) * 100)) : 0;
+  const previousVotesNeeded = Math.max(0, voteSupermajorityRequired - voteTally.previous);
+  const nextVotesNeeded = Math.max(0, voteSupermajorityRequired - voteTally.next);
+  const selectedVotes = voteDirection === "next" ? voteTally.next : voteTally.previous;
+  const selectedVotesNeeded = voteDirection === "next" ? nextVotesNeeded : previousVotesNeeded;
+  const selectedDirectionLabel = voteDirection === "next" ? "Next" : "Previous";
 
   async function onCopyShareLink() {
     if (typeof window === "undefined") {
@@ -492,15 +508,28 @@ export default function StationPreviewPage() {
             <header className="watchPanel__head">
               <div>
                 <h2>Viewer Vote Controls</h2>
-                <p>Prototype voting flow for program skipping.</p>
+                <p>Supermajority skip prototype tied to peak concurrent viewers.</p>
               </div>
             </header>
             <div className="watchPanel__body">
+              <div className="voteRule">
+                <p className="voteRule__kicker">Skip Rule</p>
+                <p className="voteRule__value">
+                  {voteSupermajorityRequired > 0
+                    ? `${voteSupermajorityRequired} votes required (66% of peak ${votePeakConcurrent})`
+                    : "Waiting for current program to start vote window"}
+                </p>
+                <p className="voteRule__meta">Vote window = current program length {formatDuration(voteWindowSeconds)}</p>
+              </div>
+
               <div className="voteTally">
                 <article>
                   <p className="voteTally__label">Skip To Previous</p>
                   <p className="voteTally__value">
-                    {voteTally.previous} votes · {previousVotePct}%
+                    {voteTally.previous} / {voteSupermajorityRequired || "--"} · {previousVotePct}%
+                  </p>
+                  <p className="voteTally__meta">
+                    {previousVotesNeeded > 0 ? `${previousVotesNeeded} more votes needed` : "Threshold reached"}
                   </p>
                   <div className="progressBar">
                     <span style={{ width: `${previousVotePct}%` }} />
@@ -509,7 +538,10 @@ export default function StationPreviewPage() {
                 <article>
                   <p className="voteTally__label">Skip To Next</p>
                   <p className="voteTally__value">
-                    {voteTally.next} votes · {nextVotePct}%
+                    {voteTally.next} / {voteSupermajorityRequired || "--"} · {nextVotePct}%
+                  </p>
+                  <p className="voteTally__meta">
+                    {nextVotesNeeded > 0 ? `${nextVotesNeeded} more votes needed` : "Threshold reached"}
                   </p>
                   <div className="progressBar">
                     <span style={{ width: `${nextVotePct}%` }} />
@@ -528,7 +560,7 @@ export default function StationPreviewPage() {
                 </button>
               </div>
 
-              <p className="emptyState">Demo only. Vote thresholds and live execution wiring can be connected later.</p>
+              <p className="emptyState">Prototype only. Skip execution can be wired after telemetry and API integration.</p>
             </div>
           </section>
 
@@ -613,6 +645,7 @@ export default function StationPreviewPage() {
         <div className="voteModal">
           <p className="metaLine">
             <span>Current: {detail?.state.currentAssetTitle ?? nowPlaying?.asset.title ?? "No active item"}</span>
+            <span>Peak concurrent: {votePeakConcurrent || "--"}</span>
             <span>Total votes: {voteTotal}</span>
           </p>
 
@@ -649,23 +682,35 @@ export default function StationPreviewPage() {
 
           <div className="voteMeta">
             <article>
-              <h4>Current Split</h4>
+              <h4>Supermajority Rule</h4>
               <p>
-                Prev {previousVotePct}% · Next {nextVotePct}%
+                {voteSupermajorityRequired > 0
+                  ? `${voteSupermajorityRequired} of ${votePeakConcurrent} viewers (66%)`
+                  : "Waiting for active program telemetry"}
               </p>
             </article>
             <article>
-              <h4>Prototype Threshold</h4>
-              <p>120 votes to trigger action</p>
+              <h4>{selectedDirectionLabel} Vote Progress</h4>
+              <p>
+                {selectedVotes} votes cast ·{" "}
+                {selectedVotesNeeded > 0 ? `${selectedVotesNeeded} more needed` : "Threshold reached for trigger"}
+              </p>
             </article>
           </div>
 
           {voteSubmitted ? (
-            <div className="inlineAlert inlineAlert--info">Vote submitted. Final execution logic can be wired to your playout API.</div>
+            <div className="inlineAlert inlineAlert--info">
+              Vote submitted for {selectedDirectionLabel}. {selectedVotesNeeded > 0 ? `${selectedVotesNeeded} additional votes needed.` : "Supermajority reached."}
+            </div>
           ) : null}
 
           <div className="modalActions">
-            <button className="uiButton uiButton--accent" type="button" onClick={onSubmitVote} disabled={voteSubmitted || !voteTarget}>
+            <button
+              className="uiButton uiButton--accent"
+              type="button"
+              onClick={onSubmitVote}
+              disabled={voteSubmitted || !voteTarget || voteSupermajorityRequired === 0}
+            >
               <AppIcon name="zap" />
               {voteSubmitted ? "Vote Submitted" : "Submit Vote"}
             </button>
