@@ -242,9 +242,6 @@ select {
   width: min(1520px, 100%);
   margin: 0 auto;
   min-height: calc(100vh - 59px);
-  border-left: 1px solid var(--line-strong);
-  border-right: 1px solid var(--line-strong);
-  border-bottom: 1px solid var(--line-strong);
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(420px, 0.9fr);
   background: var(--bg);
@@ -1079,8 +1076,6 @@ a.uiButton {
 }
 
 .watchGrid {
-  border: 1px solid var(--line-strong);
-  border-top: 0;
   background: var(--bg);
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
@@ -1611,9 +1606,6 @@ a.uiButton {
 }
 
 .workspaceShell {
-  border-left: 1px solid var(--line-strong);
-  border-right: 1px solid var(--line-strong);
-  border-bottom: 1px solid var(--line-strong);
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   min-height: calc(100vh - 72px);
