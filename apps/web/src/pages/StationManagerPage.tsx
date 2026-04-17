@@ -264,7 +264,6 @@ export default function StationManagerPage() {
   const [info, setInfo] = useState<string | null>(null);
 
   const [tab, setTab] = useState<ManagerTab>("monitor");
-  const [railOpen, setRailOpen] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -978,152 +977,87 @@ export default function StationManagerPage() {
     );
   }
 
-  const rail = (
-    <>
-      <section className="railBlock">
-        <div className="railBlock__head">
-          <h3>Station Snapshot</h3>
-          <p>{detail ? `${detail.channel.streamMode.toUpperCase()} mode` : "Loading profile"}</p>
-        </div>
-        <dl className="railStats">
-          <div>
-            <dt>Status</dt>
-            <dd>{detail?.state.isRunning ? "Live" : "Off Air"}</dd>
-          </div>
-          <div>
-            <dt>Output Route</dt>
-            <dd>{monitorStats.route}</dd>
-          </div>
-          <div>
-            <dt>Queue Depth</dt>
-            <dd>{monitorStats.queueDepth}</dd>
-          </div>
-          <div>
-            <dt>Schedules</dt>
-            <dd>{monitorStats.schedules}</dd>
-          </div>
-        </dl>
-      </section>
-
-      <section className="railBlock">
-        <div className="railBlock__head">
-          <h3>Output Endpoint</h3>
-          <p className="wrapAnywhere">{streamUrl || "No stream URL yet"}</p>
-        </div>
-        <p className="emptyState">Routing controls live in the Monitor tab.</p>
-      </section>
-
-      <section className="railBlock">
-        <div className="railBlock__head">
-          <h3>Now Playing</h3>
-          <p className="wrapAnywhere">{timeline.current?.title ?? "No active segment"}</p>
-        </div>
-        <p className="metaLine">Remaining: {timeline.remainingSec !== undefined ? formatDuration(timeline.remainingSec) : "--:--"}</p>
-      </section>
-    </>
-  );
-
   return (
     <main className="routeFrame routeFrame--workspace">
       {error ? <div className="inlineAlert inlineAlert--error">{error}</div> : null}
       {info ? <div className="inlineAlert inlineAlert--info">{info}</div> : null}
 
-      <section className="workspaceShell workspaceShell--manager">
-        <aside className="workspaceRail">{rail}</aside>
-
-        <section className="workspaceMain workspaceMain--manager">
-          <header className="workspaceHead">
-            <div>
+      <section className="workspaceMain workspaceMain--manager managerConsole">
+        <header className="managerConsoleHead">
+          <div className="managerConsoleIdentity">
+            <div className="managerConsoleIdentity__logo">
+              {profileImagePreview ? (
+                <img src={profileImagePreview} alt={`${detail?.channel.name ?? "Station"} logo`} />
+              ) : (
+                <span>{stationInitials(detail?.channel.name)}</span>
+              )}
+            </div>
+            <div className="managerConsoleIdentity__meta">
+              <p className="managerConsoleIdentity__eyebrow">Station Manager</p>
               <h1>{detail?.channel.name ?? "Loading station"}</h1>
               <p>
-                Structured operator workflow for monitoring, playlist sequencing, runtime scheduling, and ad strategy.
+                {detail?.channel.description?.trim() ||
+                  "Operational console for playback, routing, runtime scheduling, and ad pacing."}
               </p>
               {detail ? (
                 <p className="metaLine">
                   <span className={`statusPill ${detail.state.isRunning ? "statusPill--live" : "statusPill--off"}`}>
                     {detail.state.isRunning ? "Live" : "Off Air"}
                   </span>
+                  <span>{detail.channel.streamMode.toUpperCase()} mode</span>
                   {timeline.current ? <span>Now: {timeline.current.title}</span> : <span>No active item</span>}
                   {timeline.remainingSec !== undefined ? <span>Remaining {formatDuration(timeline.remainingSec)}</span> : null}
                 </p>
               ) : null}
             </div>
-            <div className="workspaceHead__actions">
-              <Link className="uiButton uiButton--secondary" to="/dashboard">
-                <AppIcon name="home" />
-                Workspace
-              </Link>
-              <button className="uiButton uiButton--secondary" type="button" onClick={() => setProfileModalOpen(true)} disabled={busy || loading || !detail}>
-                <AppIcon name="user" />
-                Edit Details
-              </button>
-              <Link className="uiButton uiButton--secondary" to={`/stations/${channelId}/preview`}>
-                <AppIcon name="eye" />
-                Viewer
-              </Link>
-              <Link className="uiButton uiButton--secondary" to="/dashboard">
-                <AppIcon name="plus" />
-                New Station
-              </Link>
-              <button
-                className={`uiButton ${detail?.state.isRunning ? "uiButton--danger" : "uiButton--accent"}`}
-                type="button"
-                onClick={() => void onControl(detail?.state.isRunning ? "stop" : "start")}
-                disabled={busy || loading || !detail}
-              >
-                <AppIcon name={detail?.state.isRunning ? "stop" : "zap"} />
-                {detail?.state.isRunning ? "Stop Stream" : "Go Live"}
-              </button>
-              <button className="uiButton uiButton--ghost mobileOnly" type="button" onClick={() => setRailOpen(true)}>
-                <AppIcon name="menu" />
-                Snapshot
-              </button>
-            </div>
-          </header>
+          </div>
+          <div className="managerConsoleActions">
+            <Link className="uiButton uiButton--secondary" to={`/stations/${channelId}/preview`}>
+              <AppIcon name="eye" />
+              Open Viewer
+            </Link>
+            <button className="uiButton uiButton--secondary" type="button" onClick={() => setProfileModalOpen(true)} disabled={busy || loading || !detail}>
+              <AppIcon name="user" />
+              Edit Station
+            </button>
+            <button className="uiButton uiButton--secondary" type="button" onClick={() => setManagerSettingsModalOpen(true)} disabled={busy || loading}>
+              <AppIcon name="menu" />
+              Stream Settings
+            </button>
+            <button
+              className={`uiButton ${detail?.state.isRunning ? "uiButton--danger" : "uiButton--accent"}`}
+              type="button"
+              onClick={() => void onControl(detail?.state.isRunning ? "stop" : "start")}
+              disabled={busy || loading || !detail}
+            >
+              <AppIcon name={detail?.state.isRunning ? "stop" : "zap"} />
+              {detail?.state.isRunning ? "Stop Stream" : "Go Live"}
+            </button>
+          </div>
+        </header>
 
-          {detail ? (
-            <section className="stationHero">
-              <div
-                className="stationHero__banner"
-                style={
-                  bannerImagePreview
-                    ? { backgroundImage: `linear-gradient(to top, var(--overlay), transparent), url(${bannerImagePreview})` }
-                    : undefined
-                }
-              />
-              <div className="stationHero__body">
-                <div className="stationHero__logo">
-                  {profileImagePreview ? (
-                    <img src={profileImagePreview} alt={`${detail.channel.name} logo`} />
-                  ) : (
-                    <span>{stationInitials(detail.channel.name)}</span>
-                  )}
-                </div>
-                <div className="stationHero__meta">
-                  <p className="stationHero__eyebrow">Station Identity</p>
-                  <h2>{detail.channel.name}</h2>
-                  <p>{detail.channel.description?.trim() || "No description yet. Add a clear station summary for operators and viewers."}</p>
-                  <p className="metaLine">
-                    <span>{detail.channel.streamMode.toUpperCase()} mode</span>
-                    <span>Created {formatDateTime(detail.channel.createdAt)}</span>
-                    <span>Updated {formatDateTime(detail.channel.updatedAt)}</span>
-                  </p>
-                </div>
-                <div className="stationHero__actions">
-                  <button className="uiButton uiButton--accent" type="button" onClick={() => setProfileModalOpen(true)} disabled={busy}>
-                    <AppIcon name="upload" />
-                    Update Branding
-                  </button>
-                  <Link className="uiButton uiButton--secondary" to={`/stations/${channelId}/preview`}>
-                    <AppIcon name="eye" />
-                    Review Viewer Page
-                  </Link>
-                </div>
-              </div>
-            </section>
-          ) : null}
+        {detail ? (
+          <section className="summaryStrip summaryStrip--manager">
+            <article>
+              <h4>Status</h4>
+              <p>{detail.state.isRunning ? "Live" : "Off Air"}</p>
+            </article>
+            <article>
+              <h4>Output Route</h4>
+              <p>{monitorStats.route}</p>
+            </article>
+            <article>
+              <h4>Queue Depth</h4>
+              <p>{monitorStats.queueDepth}</p>
+            </article>
+            <article>
+              <h4>Schedules</h4>
+              <p>{monitorStats.schedules}</p>
+            </article>
+          </section>
+        ) : null}
 
-          <nav className="managerTabs" aria-label="Station Workspace Tabs">
+        <nav className="managerTabs" aria-label="Station Workspace Tabs">
             <button type="button" data-active={tab === "monitor"} onClick={() => setTab("monitor")}>
               <span className="uiInline">
                 <AppIcon name="monitor" />
@@ -1148,9 +1082,9 @@ export default function StationManagerPage() {
                 Ads
               </span>
             </button>
-          </nav>
+        </nav>
 
-          <section className="workspaceContent">
+        <section className="workspaceContent managerConsoleContent">
             {loading || !detail ? (
               <section className="workspaceSection">
                 <div className="workspaceSection__body">
@@ -1164,8 +1098,28 @@ export default function StationManagerPage() {
                 <section className="workspaceSection">
                   <header className="workspaceSection__head">
                     <div>
-                      <h2>Control Room Overview</h2>
-                      <p>Health and routing snapshot inspired by live control-room workflows.</p>
+                      <h2>Live Monitor</h2>
+                      <p>Primary feed, stream health, and route controls.</p>
+                    </div>
+                    <div className="workspaceHead__actions">
+                      <button
+                        className="uiButton uiButton--secondary"
+                        type="button"
+                        onClick={() => void onSetLivepeerRoute(true)}
+                        disabled={busy || Boolean(detail.livepeer?.enabled)}
+                      >
+                        <AppIcon name="zap" />
+                        Use Livepeer Output
+                      </button>
+                      <button
+                        className="uiButton uiButton--secondary"
+                        type="button"
+                        onClick={() => void onSetLivepeerRoute(false)}
+                        disabled={busy || !activeCustomDestination || !detail.livepeer?.enabled}
+                      >
+                        <AppIcon name="send" />
+                        Use Custom Output
+                      </button>
                     </div>
                   </header>
                   <div className="workspaceSection__body">
@@ -1193,37 +1147,6 @@ export default function StationManagerPage() {
                         <small>Programs in queue / active schedules</small>
                       </article>
                     </div>
-                  </div>
-                </section>
-
-                <section className="workspaceSection">
-                  <header className="workspaceSection__head">
-                    <div>
-                      <h2>Live Output Monitor</h2>
-                      <p>Real-time feed view using Livepeer when enabled, otherwise HLS stream.</p>
-                    </div>
-                    <div className="workspaceHead__actions">
-                      <button
-                        className="uiButton uiButton--secondary"
-                        type="button"
-                        onClick={() => void onSetLivepeerRoute(true)}
-                        disabled={busy || Boolean(detail.livepeer?.enabled)}
-                      >
-                        <AppIcon name="zap" />
-                        Use Livepeer Output
-                      </button>
-                      <button
-                        className="uiButton uiButton--secondary"
-                        type="button"
-                        onClick={() => void onSetLivepeerRoute(false)}
-                        disabled={busy || !activeCustomDestination || !detail.livepeer?.enabled}
-                      >
-                        <AppIcon name="send" />
-                        Use Custom Output
-                      </button>
-                    </div>
-                  </header>
-                  <div className="workspaceSection__body">
                     {livepeerEmbedUrl ? (
                       <div className="mediaShell">
                         <iframe
@@ -1251,11 +1174,8 @@ export default function StationManagerPage() {
                 <section className="workspaceSection">
                   <header className="workspaceSection__head">
                     <div>
-                      <h2>Custom Output Destinations</h2>
-                      <p>
-                        Configure a single active RTMP destination for creators who want to run their own output
-                        infrastructure.
-                      </p>
+                      <h2>Output Destinations</h2>
+                      <p>Configure custom RTMP routes and keep one active fallback target.</p>
                     </div>
                   </header>
                   <div className="workspaceSection__body">
@@ -1344,17 +1264,8 @@ export default function StationManagerPage() {
                 <section className="workspaceSection">
                   <header className="workspaceSection__head">
                     <div>
-                      <h2>Public Viewer Controls (Prototype)</h2>
-                      <p>
-                        Management tools moved out of the public viewer. Use this operator surface for audience-facing
-                        settings and multicast distribution.
-                      </p>
-                    </div>
-                    <div className="workspaceHead__actions">
-                      <button className="uiButton uiButton--secondary" type="button" onClick={() => setManagerSettingsModalOpen(true)}>
-                        <AppIcon name="menu" />
-                        Open Stream Settings
-                      </button>
+                      <h2>Audience Controls (Prototype)</h2>
+                      <p>Viewer access, comments/voting toggles, and multicast destinations.</p>
                     </div>
                   </header>
                   <div className="workspaceSection__body">
@@ -1765,11 +1676,6 @@ export default function StationManagerPage() {
             ) : null}
           </section>
         </section>
-      </section>
-
-      <OverlayPanel open={railOpen} onClose={() => setRailOpen(false)} title="Station Snapshot" mode="left">
-        {rail}
-      </OverlayPanel>
 
       <OverlayPanel
         open={profileModalOpen}
