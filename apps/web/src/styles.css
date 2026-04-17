@@ -976,8 +976,6 @@ a.uiButton {
 .watchPage {
   display: grid;
   gap: 0;
-  height: calc(100vh - var(--topbar-height));
-  overflow: hidden;
 }
 
 .watchBroadcast {
@@ -1124,21 +1122,14 @@ a.uiButton {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
   align-items: start;
-  height: 100%;
   gap: 0;
 }
 
 .watchMainColumn {
   background: var(--bg);
-  height: 100%;
-  min-height: 0;
   min-width: 0;
   display: grid;
   align-content: start;
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
   gap: 0;
 }
 
@@ -1185,14 +1176,8 @@ a.uiButton {
 .watchRail {
   border-left: 1px solid var(--line);
   background: var(--bg);
-  height: 100%;
-  min-height: 0;
   display: grid;
   align-content: start;
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
   gap: 0;
 }
 
@@ -2031,8 +2016,6 @@ a.uiButton {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   min-height: calc(100vh - var(--topbar-height));
-  height: calc(100vh - var(--topbar-height));
-  overflow: hidden;
   background: var(--bg);
   gap: 0;
 }
@@ -2048,11 +2031,6 @@ a.uiButton {
   display: grid;
   align-content: start;
   height: 100%;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
 }
 
 .railBlock {
@@ -2146,8 +2124,6 @@ a.uiButton {
   min-width: 0;
   display: grid;
   grid-template-rows: auto auto 1fr;
-  height: 100%;
-  overflow: hidden;
 }
 
 .workspaceMain--manager {
@@ -2227,8 +2203,7 @@ a.uiButton {
 
 .workspaceContent {
   min-width: 0;
-  min-height: 0;
-  overflow: auto;
+  overflow: visible;
   display: grid;
   align-content: start;
   background: var(--bg);
@@ -2689,21 +2664,8 @@ a.uiButton {
 }
 
 @media (max-width: 1080px) {
-  .watchPage {
-    height: auto;
-    overflow: visible;
-  }
-
   .watchGrid {
     grid-template-columns: 1fr;
-    height: auto;
-  }
-
-  .watchMainColumn,
-  .watchRail {
-    height: auto;
-    overflow: visible;
-    scrollbar-gutter: auto;
   }
 
   .watchRail {
