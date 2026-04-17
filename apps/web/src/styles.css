@@ -2225,6 +2225,114 @@ a.uiButton {
   border-top: 1px solid var(--line);
 }
 
+.managerRail {
+  border-right: 1px solid var(--line);
+}
+
+.managerRail .railNav .uiInline {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.managerMonitorTop {
+  border: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  min-width: 0;
+}
+
+.managerMonitorTop__player {
+  border-right: 1px solid var(--line);
+  padding: 0.86rem;
+  min-width: 0;
+}
+
+.managerMonitorTop__frame {
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.managerMonitorTop__frame .mediaShell {
+  border: 0;
+}
+
+.managerMonitorTop__side {
+  padding: 0.86rem;
+  display: grid;
+  gap: 0.72rem;
+  align-content: start;
+  min-width: 0;
+}
+
+.managerMonitorStats {
+  margin: 0;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  display: grid;
+}
+
+.managerMonitorStats > div {
+  border-bottom: 1px solid var(--line);
+  padding: 0.62rem 0.68rem;
+  display: grid;
+  gap: 0.24rem;
+}
+
+.managerMonitorStats > div:last-child {
+  border-bottom: 0;
+}
+
+.managerMonitorStats dt {
+  margin: 0;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.managerMonitorStats dd {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.managerMonitorNow {
+  border: 1px solid var(--line);
+  padding: 0.62rem 0.68rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.managerMonitorNow__kicker {
+  margin: 0;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.managerMonitorNow__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.managerMonitorNow__meta {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.managerMonitorTop__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
 .workspaceHead {
   border-bottom: 1px solid var(--line);
   padding: 1rem 1.1rem;
@@ -2672,9 +2780,15 @@ a.uiButton {
     display: inline-flex;
   }
 
-  .workspaceShell,
-  .workspaceShell--manager {
+  .workspaceShell {
     grid-template-columns: 1fr;
+    height: auto;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .workspaceShell--manager {
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
     height: auto;
     min-height: auto;
     overflow: visible;
@@ -2702,8 +2816,13 @@ a.uiButton {
     border-bottom: 1px solid var(--line);
   }
 
-  .workspaceRail {
+  .workspaceShell:not(.workspaceShell--manager) .workspaceRail {
     display: none;
+    overflow: visible;
+  }
+
+  .workspaceShell--manager .workspaceRail {
+    display: grid;
     overflow: visible;
   }
 
@@ -2756,6 +2875,10 @@ a.uiButton {
   .stationIdentityInputs {
     grid-template-columns: 1fr;
   }
+
+  .managerMonitorTop {
+    grid-template-columns: minmax(0, 1.7fr) minmax(240px, 1fr);
+  }
 }
 
 @media (max-width: 1080px) {
@@ -2763,9 +2886,30 @@ a.uiButton {
     grid-template-columns: 1fr;
   }
 
+  .workspaceShell--manager {
+    grid-template-columns: 1fr;
+  }
+
+  .workspaceShell--manager .workspaceRail {
+    display: none;
+  }
+
   .watchRail {
     border-left: 0;
     border-top: 1px solid var(--line);
+  }
+
+  .managerMonitorTop {
+    grid-template-columns: 1fr;
+  }
+
+  .managerMonitorTop__player {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .managerMonitorTop__actions {
+    grid-template-columns: 1fr;
   }
 }
 
