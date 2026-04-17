@@ -5,8 +5,8 @@
 :root {
   color-scheme: light;
   --bg: #f1f1f1;
-  --surface: #f8f8f8;
-  --surface-strong: #ffffff;
+  --surface: #f1f1f1;
+  --surface-strong: #f1f1f1;
   --text: #111111;
   --text-muted: #505050;
   --line: #d2d2d2;
@@ -23,8 +23,8 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
   --bg: #0e0e0e;
-  --surface: #141414;
-  --surface-strong: #1b1b1b;
+  --surface: #0e0e0e;
+  --surface-strong: #0e0e0e;
   --text: #f1f1f1;
   --text-muted: #b7b7b7;
   --line: #292929;
@@ -146,21 +146,16 @@ select {
 }
 
 .topnav {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   justify-self: center;
-  min-width: 0;
-  max-width: 100%;
-  overflow-x: auto;
-  scrollbar-width: none;
+  width: min(260px, 100%);
   border: 1px solid var(--line);
-  background: var(--surface);
-}
-
-.topnav::-webkit-scrollbar {
-  display: none;
+  background: transparent;
 }
 
 .topnav__link {
+  width: 100%;
   padding: 0.52rem 0.84rem;
   min-height: 36px;
   border-right: 1px solid var(--line);
@@ -195,7 +190,7 @@ select {
   gap: 0.48rem;
   min-height: 36px;
   border: 1px solid var(--line);
-  background: var(--surface);
+  background: transparent;
   color: var(--text);
   padding: 0.34rem 0.58rem;
   cursor: pointer;
@@ -941,7 +936,7 @@ a.uiButton {
 
 .mediaShell {
   border: 1px solid var(--line);
-  background: #000;
+  background: var(--bg);
 }
 
 .mediaShell iframe,
@@ -950,7 +945,7 @@ a.uiButton {
   width: 100%;
   border: 0;
   aspect-ratio: 16 / 9;
-  background: #000;
+  background: var(--bg);
 }
 
 .metaLine {
@@ -990,7 +985,7 @@ a.uiButton {
   width: min(860px, 100%);
   margin: 0 auto;
   border: 1px solid var(--line);
-  background: #000;
+  background: var(--bg);
   display: grid;
 }
 
@@ -1945,11 +1940,11 @@ a.uiButton {
   }
 
   .topnav {
-    justify-self: stretch;
+    justify-self: center;
+    width: min(220px, 100%);
   }
 
   .topnav__link {
-    flex: 0 0 auto;
     text-align: center;
     min-height: 32px;
     padding: 0.42rem 0.62rem;
