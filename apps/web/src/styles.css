@@ -974,6 +974,7 @@ a.uiButton {
   background: var(--surface-strong);
   display: grid;
   min-width: 0;
+  border-bottom: 1px solid var(--line);
 }
 
 .watchBroadcast__player {
@@ -1103,6 +1104,15 @@ a.uiButton {
 .watchPanel__head {
   border-bottom: 1px solid var(--line);
   padding: 0.88rem 0.94rem;
+}
+
+.watchPanel--comments .watchPanel__head {
+  border-bottom: 1px solid var(--line);
+}
+
+.watchPanel--comments .watchPanel__body {
+  padding: 0;
+  gap: 0;
 }
 
 .watchPanel__head h2 {
@@ -1249,11 +1259,22 @@ a.uiButton {
   background: var(--surface);
 }
 
+.watchPanel--comments .watchComments {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+}
+
 .watchComment {
   border-bottom: 1px solid var(--line);
   padding: 0.72rem 0.78rem;
   display: grid;
   gap: 0.3rem;
+}
+
+.watchPanel--comments .watchComment {
+  padding-left: 0.94rem;
+  padding-right: 0.94rem;
 }
 
 .watchComment:last-child {
@@ -1278,6 +1299,10 @@ a.uiButton {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.5rem;
+}
+
+.watchPanel--comments .watchCommentComposer {
+  padding: 0.88rem 0.94rem;
 }
 
 .voteTally {
