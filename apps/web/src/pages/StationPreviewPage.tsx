@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { getApiBase, getChannelDetail, getChannelStatus } from "../api";
 import AppIcon from "../components/AppIcon";
 import HlsPlayer from "../components/HlsPlayer";
+import OverlayPanel from "../components/OverlayPanel";
 import type { Asset, ChannelDetail } from "../types";
 
 function resolveStreamUrl(channelId: string, detail: ChannelDetail): string {
@@ -137,6 +138,8 @@ interface GuideEntry {
   endMs?: number;
 }
 
+type VoteDirection = "previous" | "next";
+
 export default function StationPreviewPage() {
   const { channelId } = useParams();
   const [detail, setDetail] = useState<ChannelDetail | null>(null);
@@ -146,6 +149,10 @@ export default function StationPreviewPage() {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [stableStreamUrl, setStableStreamUrl] = useState("");
+  const [voteModalOpen, setVoteModalOpen] = useState(false);
+  const [voteDirection, setVoteDirection] = useState<VoteDirection>("next");
+  const [voteSubmitted, setVoteSubmitted] = useState(false);
+  const [voteTally, setVoteTally] = useState({ previous: 38, next: 67 });
 
   const load = useCallback(
     async (background: boolean) => {
@@ -315,6 +322,20 @@ export default function StationPreviewPage() {
     return formatDateFromMs(nowPlaying?.startMs ?? currentStartMs);
   }, [currentStartMs, nowPlaying]);
 
+  const previousProgram = useMemo(() => {
+    if (!programLineup.length) {
+      return undefined;
+    }
+    const index = currentProgramIndex ?? 0;
+    return programLineup[mod(index - 1, programLineup.length)];
+  }, [currentProgramIndex, programLineup]);
+
+  const nextProgram = guideEntries[1]?.asset;
+  const voteTarget = voteDirection === "next" ? nextProgram : previousProgram;
+  const voteTotal = voteTally.previous + voteTally.next;
+  const previousVotePct = voteTotal > 0 ? Math.round((voteTally.previous / voteTotal) * 100) : 0;
+  const nextVotePct = voteTotal > 0 ? Math.round((voteTally.next / voteTotal) * 100) : 0;
+
   async function onCopyShareLink() {
     if (typeof window === "undefined") {
       return;
@@ -325,6 +346,20 @@ export default function StationPreviewPage() {
     } catch {
       setShareMessage("Unable to copy link.");
     }
+  }
+
+  function openVoteModal(direction: VoteDirection) {
+    setVoteDirection(direction);
+    setVoteSubmitted(false);
+    setVoteModalOpen(true);
+  }
+
+  function onSubmitVote() {
+    setVoteTally((current) => ({
+      ...current,
+      [voteDirection]: current[voteDirection] + 1
+    }));
+    setVoteSubmitted(true);
   }
 
   if (!channelId) {
@@ -453,6 +488,50 @@ export default function StationPreviewPage() {
         </section>
 
         <aside className="watchRail">
+          <section className="watchPanel watchPanel--vote">
+            <header className="watchPanel__head">
+              <div>
+                <h2>Viewer Vote Controls</h2>
+                <p>Prototype voting flow for program skipping.</p>
+              </div>
+            </header>
+            <div className="watchPanel__body">
+              <div className="voteTally">
+                <article>
+                  <p className="voteTally__label">Skip To Previous</p>
+                  <p className="voteTally__value">
+                    {voteTally.previous} votes · {previousVotePct}%
+                  </p>
+                  <div className="progressBar">
+                    <span style={{ width: `${previousVotePct}%` }} />
+                  </div>
+                </article>
+                <article>
+                  <p className="voteTally__label">Skip To Next</p>
+                  <p className="voteTally__value">
+                    {voteTally.next} votes · {nextVotePct}%
+                  </p>
+                  <div className="progressBar">
+                    <span style={{ width: `${nextVotePct}%` }} />
+                  </div>
+                </article>
+              </div>
+
+              <div className="voteActions">
+                <button className="uiButton uiButton--secondary" type="button" onClick={() => openVoteModal("previous")}>
+                  <AppIcon name="skip-prev" />
+                  Vote Previous
+                </button>
+                <button className="uiButton uiButton--accent" type="button" onClick={() => openVoteModal("next")}>
+                  <AppIcon name="skip-next" />
+                  Vote Next
+                </button>
+              </div>
+
+              <p className="emptyState">Demo only. Vote thresholds and live execution wiring can be connected later.</p>
+            </div>
+          </section>
+
           <section className="watchPanel">
             <header className="watchPanel__head">
               <div>
@@ -523,6 +602,80 @@ export default function StationPreviewPage() {
           </section>
         </aside>
       </section>
+
+      <OverlayPanel
+        open={voteModalOpen}
+        onClose={() => setVoteModalOpen(false)}
+        title="Vote To Skip Program"
+        subtitle="Click-through prototype for viewer-driven queue control."
+        mode="right"
+      >
+        <div className="voteModal">
+          <p className="metaLine">
+            <span>Current: {detail?.state.currentAssetTitle ?? nowPlaying?.asset.title ?? "No active item"}</span>
+            <span>Total votes: {voteTotal}</span>
+          </p>
+
+          <div className="voteDirectionSwitch">
+            <button
+              className={`voteDirection ${voteDirection === "previous" ? "isActive" : ""}`}
+              type="button"
+              onClick={() => {
+                setVoteDirection("previous");
+                setVoteSubmitted(false);
+              }}
+            >
+              <AppIcon name="skip-prev" />
+              Previous Program
+            </button>
+            <button
+              className={`voteDirection ${voteDirection === "next" ? "isActive" : ""}`}
+              type="button"
+              onClick={() => {
+                setVoteDirection("next");
+                setVoteSubmitted(false);
+              }}
+            >
+              <AppIcon name="skip-next" />
+              Next Program
+            </button>
+          </div>
+
+          <section className="voteTarget">
+            <p className="voteTarget__kicker">Selected target</p>
+            <h3>{voteTarget?.title ?? "No program available for this direction yet."}</h3>
+            <p>{voteTarget ? `Program length ${formatDuration(voteTarget.durationSec)}` : "Queue needs more than one item."}</p>
+          </section>
+
+          <div className="voteMeta">
+            <article>
+              <h4>Current Split</h4>
+              <p>
+                Prev {previousVotePct}% · Next {nextVotePct}%
+              </p>
+            </article>
+            <article>
+              <h4>Prototype Threshold</h4>
+              <p>120 votes to trigger action</p>
+            </article>
+          </div>
+
+          {voteSubmitted ? (
+            <div className="inlineAlert inlineAlert--info">Vote submitted. Final execution logic can be wired to your playout API.</div>
+          ) : null}
+
+          <div className="modalActions">
+            <button className="uiButton uiButton--accent" type="button" onClick={onSubmitVote} disabled={voteSubmitted || !voteTarget}>
+              <AppIcon name="zap" />
+              {voteSubmitted ? "Vote Submitted" : "Submit Vote"}
+            </button>
+            <button className="uiButton uiButton--secondary" type="button" onClick={() => setVoteModalOpen(false)}>
+              <AppIcon name="close" />
+              Close
+            </button>
+          </div>
+        </div>
+      </OverlayPanel>
     </main>
   );
 }
