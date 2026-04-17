@@ -23,6 +23,15 @@ import { getStoredWalletAddress } from "../wallet";
 
 type ManagerTab = "monitor" | "playlist" | "runtime" | "ads";
 
+interface ManagerGuideEntry {
+  asset: Asset;
+  slot: number;
+  isNow: boolean;
+  durationSec?: number;
+  startMs?: number;
+  endMs?: number;
+}
+
 function formatDateTime(iso: string | undefined): string {
   if (!iso) {
     return "Not set";
@@ -38,6 +47,28 @@ function formatDateTime(iso: string | undefined): string {
     hour: "numeric",
     minute: "2-digit"
   }).format(parsed);
+}
+
+function formatTimeFromMs(ms: number | undefined): string {
+  if (!ms) {
+    return "--";
+  }
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(new Date(ms));
+}
+
+function formatDateFromMs(ms: number | undefined): string {
+  if (!ms) {
+    return "Date unavailable";
+  }
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  }).format(new Date(ms));
 }
 
 function formatDuration(seconds: number | undefined): string {
@@ -65,6 +96,17 @@ function formatElapsed(seconds: number | undefined): string {
     return `${minutes}m ${String(secs).padStart(2, "0")}s`;
   }
   return `${secs}s`;
+}
+
+function toMs(iso: string | undefined): number | undefined {
+  if (!iso) {
+    return undefined;
+  }
+  const parsed = Date.parse(iso);
+  if (Number.isNaN(parsed)) {
+    return undefined;
+  }
+  return parsed;
 }
 
 function toIsoDateTime(localInput: string): string | undefined {
@@ -300,11 +342,11 @@ export default function StationManagerPage() {
   const timeline = useMemo(() => {
     if (!detail) {
       return {
-        previous: [] as Asset[],
-        next: [] as Asset[],
         current: undefined as Asset | undefined,
         remainingSec: undefined as number | undefined,
-        progressPct: 0
+        progressPct: 0,
+        guideEntries: [] as ManagerGuideEntry[],
+        guideDateLabel: "Date unavailable"
       };
     }
 
@@ -315,21 +357,6 @@ export default function StationManagerPage() {
 
     const currentAsset = detail.assets.find((asset) => asset.id === detail.state.currentAssetId);
     const currentPlaylistIndex = findClosestIndex(playlistIds, detail.state.currentAssetId, normalizedQueueIndex);
-
-    const previous: Asset[] = [];
-    const next: Asset[] = [];
-
-    if (queueLength > 0) {
-      const previousAnchor = currentPlaylistIndex ?? normalizedQueueIndex;
-      const nextAnchor = currentPlaylistIndex !== undefined ? currentPlaylistIndex + 1 : normalizedQueueIndex;
-
-      for (let offset = 1; offset <= Math.min(3, queueLength); offset += 1) {
-        previous.push(playlist[mod(previousAnchor - offset, queueLength)]);
-      }
-      for (let offset = 0; offset < Math.min(6, queueLength); offset += 1) {
-        next.push(playlist[mod(nextAnchor + offset, queueLength)]);
-      }
-    }
 
     let remainingSec: number | undefined;
     let progressPct = 0;
@@ -345,12 +372,47 @@ export default function StationManagerPage() {
       }
     }
 
+    const guideEntries: ManagerGuideEntry[] = [];
+    const rawStartedMs = toMs(detail.state.currentStartedAt);
+
+    if (queueLength > 0) {
+      const startIndex = currentPlaylistIndex ?? normalizedQueueIndex;
+      const currentOffsetSec = Math.max(0, Math.floor(detail.state.currentProgramOffsetSec ?? 0));
+      const currentAssetStartMs = rawStartedMs !== undefined ? rawStartedMs - currentOffsetSec * 1000 : undefined;
+      let cursorMs = currentAssetStartMs;
+      const count = Math.min(queueLength, 12);
+
+      for (let slot = 0; slot < count; slot += 1) {
+        const asset = playlist[mod(startIndex + slot, queueLength)];
+        const durationSec = asset.durationSec && asset.durationSec > 0 ? Math.floor(asset.durationSec) : undefined;
+        const startMs = cursorMs;
+        const endMs = durationSec !== undefined && cursorMs !== undefined ? cursorMs + durationSec * 1000 : undefined;
+
+        guideEntries.push({
+          asset,
+          slot,
+          isNow: slot === 0,
+          durationSec,
+          startMs,
+          endMs
+        });
+
+        if (durationSec !== undefined && cursorMs !== undefined) {
+          cursorMs = endMs;
+        } else {
+          cursorMs = undefined;
+        }
+      }
+    }
+
+    const guideDateLabel = formatDateFromMs(guideEntries[0]?.startMs ?? rawStartedMs);
+
     return {
-      previous,
-      next,
       current: currentAsset,
       remainingSec,
-      progressPct
+      progressPct,
+      guideEntries,
+      guideDateLabel
     };
   }, [detail, nowMs]);
 
@@ -882,8 +944,8 @@ export default function StationManagerPage() {
                 <section className="workspaceSection">
                   <header className="workspaceSection__head">
                     <div>
-                      <h2>Timeline</h2>
-                      <p>Current progress and sequence context for playout.</p>
+                      <h2>Program Guide</h2>
+                      <p>{timeline.guideDateLabel}</p>
                     </div>
                     <div className="workspaceHead__actions">
                       <button className="uiButton uiButton--secondary" type="button" onClick={() => void onControl("previous")} disabled={busy}>
@@ -897,44 +959,41 @@ export default function StationManagerPage() {
                     </div>
                   </header>
                   <div className="workspaceSection__body">
-                    <section className="timelineBand">
-                      <div className="timelineBand__group">
-                        <h4>Previously Played</h4>
-                        {timeline.previous.length === 0 ? <p className="emptyState">No history yet.</p> : null}
-                        {timeline.previous.length > 0 ? (
-                          <ol>
-                            {timeline.previous.map((asset, index) => (
-                              <li key={`${asset.id}-prev-${index}`}>{asset.title}</li>
-                            ))}
-                          </ol>
-                        ) : null}
-                      </div>
+                    <p className="metaLine">
+                      <span>{timeline.current?.title ?? "No active program"}</span>
+                      <span>Progress {Math.round(timeline.progressPct)}%</span>
+                      <span>Remaining {formatDuration(timeline.remainingSec)}</span>
+                    </p>
 
-                      <div className="timelineBand__group">
-                        <h4>Now Playing</h4>
-                        <p className="dataRow__title">{timeline.current?.title ?? "Nothing live right now"}</p>
-                        <p className="dataRow__meta">
-                          {timeline.current
-                            ? `${timeline.current.insertionCategory ?? timeline.current.type} · ${formatDuration(timeline.current.durationSec)}`
-                            : "Queue content and go live."}
-                        </p>
-                        <div className="progressBar">
-                          <span style={{ width: `${timeline.progressPct}%` }} />
+                    {timeline.guideEntries.length === 0 ? (
+                      <p className="emptyState">No lineup available yet. Add programs in the Playlist tab.</p>
+                    ) : (
+                      <section className="guideTable" aria-label="Station Program Guide">
+                        <div className="guideTable__head">
+                          <p>Time</p>
+                          <p>Program</p>
+                          <p>Status</p>
                         </div>
-                      </div>
-
-                      <div className="timelineBand__group">
-                        <h4>Up Next</h4>
-                        {timeline.next.length === 0 ? <p className="emptyState">No upcoming items.</p> : null}
-                        {timeline.next.length > 0 ? (
-                          <ol>
-                            {timeline.next.map((asset, index) => (
-                              <li key={`${asset.id}-next-${index}`}>{asset.title}</li>
-                            ))}
-                          </ol>
-                        ) : null}
-                      </div>
-                    </section>
+                        <div className="guideTable__body">
+                          {timeline.guideEntries.map((entry) => (
+                            <article className={`guideItem ${entry.isNow ? "guideItem--live" : ""}`} key={`${entry.asset.id}-${entry.slot}`}>
+                              <div className="guideItem__top">
+                                <p className="guideItem__time">
+                                  {formatTimeFromMs(entry.startMs)} - {formatTimeFromMs(entry.endMs)}
+                                </p>
+                                <span className={`statusPill ${entry.isNow ? "statusPill--live" : "statusPill--off"}`}>
+                                  {entry.isNow ? "Now" : "Up Next"}
+                                </span>
+                              </div>
+                              <p className="guideItem__title" title={entry.asset.title}>
+                                {entry.asset.title}
+                              </p>
+                              <p className="guideItem__meta">Length {formatDuration(entry.durationSec)}</p>
+                            </article>
+                          ))}
+                        </div>
+                      </section>
+                    )}
                   </div>
                 </section>
               </>
