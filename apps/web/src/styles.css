@@ -1431,6 +1431,7 @@ a.uiButton {
 }
 
 .workspaceRail {
+  border-right: 1px solid var(--line);
   background: var(--bg);
   min-width: 0;
   display: grid;
